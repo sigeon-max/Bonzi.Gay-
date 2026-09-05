@@ -1519,7 +1519,7 @@ function blessedPopup() {
                 <ul>
                     <li> <b>Mutlihatting</b>: Use the /hat command with up to 3 hats. Try <var>/hat dank tophat</var>.
                     <li> <b>Skins:</b> 3 custom skins
-                    <li> <b>Hats:</b> 3 extra hats
+                    <li> <b>Hats:</b> 4 extra hats
                 </ul>
                 <h3>Skins</h3>
                 <div class="roulette">
