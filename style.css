@@ -441,7 +441,6 @@ body.vaporwave #chat_send:active {
     width: 100px;
 }
 
-
 #chat_send:hover, #start_button:hover {
     background-position: 0 -33px;
 }
@@ -451,11 +450,15 @@ body.vaporwave #chat_send:active {
 }
 
 #start_button {
-    background-image: url("img/desktop/startthin.png");
-    padding-left: 7px;
-    margin-left: -6px;
-    width: 33px;
-    z-index: -1;
+    background-image: url("img/desktop/start.png");
+    background-size: 100%;
+    background-repeat: no-repeat;
+    width: 100px;
+    height: 30px;
+    padding: 0;
+    margin: 0;
+    z-index: 10000;
+    cursor: pointer;
 }
 
 
@@ -856,6 +859,23 @@ textarea {
     display: flex;
     flex-direction: column;
     padding: 10px 16px 16px 16px;
+}
+
+.settings .voice_select {
+    margin: 6px 0 12px 0;
+    padding: 4px 8px;
+    font-size: 14px;
+    font-family: "Tahoma", sans-serif;
+    background: #fff;
+    border: 1px inset #AAA;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.settings .voice_select:focus {
+    border-color: #3366cc;
+    box-shadow: 0 0 2px #3366cc;
 }
 
 .blacklist {
@@ -1329,6 +1349,23 @@ gay-rainbow code {
     border-top-right-radius: 7px;
     image-rendering: pixelated;
     z-index: 10000;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+#start_menu[hidden] {
+    display: none !important;
+}
+
+#start_menu.vanished {
+    opacity: 0;
+    transform: scaleY(0.5) translateY(50%);
+    pointer-events: none;
+}
+
+#start_menu.exploded {
+    opacity: 0;
+    transform: scale(1.5);
+    pointer-events: none;
 }
 
 #start_menu_pfp {
