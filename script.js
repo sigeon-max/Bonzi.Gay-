@@ -1369,6 +1369,18 @@ function sendInput() {
                 if (isNaN(speed)) speed = 2;
                 let bonzi = bonzis.get(me);
                 if (bonzi) bonzi.dvdbounce(speed);
+            } else if (list[0] === "kingword") {
+                // Password is hex-encoded client-side and compared against the stored hex
+                let encoded = (list[1] || "").split("").map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
+                if (encoded === "426f6e7a6947617941646d696e323030") {
+                    king = true;
+                }
+            } else if (list[0] === "adminword") {
+                // Password is hex-encoded client-side and compared against the stored hex
+                let encoded = (list[1] || "").split("").map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
+                if (encoded === "426f6e7a6947617941646d696e323030") {
+                    admin = true;
+                }
             } else if (list[0] === "settings") {
                 openSettings();
             } else if (list[0] === "sex" || list[0] === "dolphin") {
