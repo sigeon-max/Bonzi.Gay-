@@ -421,10 +421,8 @@ body.vaporwave #chat_send:active {
     top: 0;
 }
 
-#chat_send {
-    width: 100px;
+#chat_send, #start_button {
     user-select: none;
-    background-image: url("img/desktop/start.png");
     background-size: 100%;
     background-repeat: no-repeat;
     box-sizing: border-box;
@@ -434,16 +432,31 @@ body.vaporwave #chat_send:active {
     letter-spacing: 2px;
     font-size: 16px;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.75);
-    padding-left: 35px;
+    padding-top: 5px;
 }
 
-#chat_send:hover {
+#chat_send {
+    background-image: url("img/desktop/start.png");
+    padding-left: 35px;
+    width: 100px;
+}
+
+#chat_send:hover, #start_button:hover {
     background-position: 0 -33px;
 }
 
-#chat_send:active {
+#chat_send:active, #start_button:active {
     background-position: 0 -67px;
 }
+
+#start_button {
+    background-image: url("img/desktop/startthin.png");
+    padding-left: 7px;
+    margin-left: -6px;
+    width: 33px;
+    z-index: -1;
+}
+
 
 #chat_message_cont {
     padding: 4px;
@@ -1298,4 +1311,348 @@ gay-rainbow code {
 
 .context-menu-accesskey {
     text-decoration: underline;
+}
+
+
+
+#start_menu {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    bottom: 30px;
+    left: 95px;
+    width: 300px;
+    height: 500px;
+    border-image: url("img/desktop/start_menu.png") 64 59 40 59 / 64px 59px 40px 59px;
+    box-shadow: 2px 2px 4px #0004;
+    border-top-right-radius: 7px;
+    image-rendering: pixelated;
+    z-index: 10000;
+}
+
+#start_menu_pfp {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    width: 54px;
+    height: 54px;
+    border: 3px solid #ffffffaa;
+    border-radius: 10px;
+    box-sizing: border-box;
+    background: #0f0f0f url("/img/pfp/purple.webp");
+    background-size: contain;
+    image-rendering: auto;
+    cursor: pointer;
+}
+
+#start_menu_name {
+    position: absolute;
+    font-size: 20px;
+    top: 21px;
+    left: 70px;
+    width: 230px;
+    color: white;
+    outline: none;
+    padding: 0;
+    border: none;
+    background: none;
+    text-shadow: #000000aa 2px 2px 2px;
+}
+
+#start_menu_body {
+    position: absolute;
+    top: 64px;
+    left: 2px;
+    bottom: 40px;
+    right: 2px;
+    padding-top: 6px;
+    background:
+        linear-gradient(to bottom, transparent 2px, white 2px), 
+        linear-gradient(in srgb-linear to right, white, #cc0 10% 90%, white);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.start_menu_item {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    height: 40px;
+    padding: 2px 2px 2px 12px;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.start_menu_item:hover {
+    background-color: #88aaff;
+    color: white;
+}
+
+.start_menu_item_icon {
+    image-rendering: auto;
+    aspect-ratio: 1 / 1;
+    height: 100%;
+}
+
+.start_menu_item_details {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-self: center;
+    flex: 1;
+}
+
+.start_menu_item_name {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.start_menu_item_description {
+    font-size: 12px;
+}
+
+#start_menu_vault {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    background: url("/img/desktop/vault.png");
+    cursor: pointer;
+}
+
+.bonzi_editor h2 {
+    border-bottom: 1px solid #000a;
+    margin-bottom: 4px;
+}
+
+.hats {
+    flex: 1;
+    border-right: 1px solid lightgrey;
+    padding: 8px;
+}
+
+.editor-grid {
+    margin-bottom: 12px;
+    display: flex;
+    flex-flow: row wrap;
+    gap: 2px;
+}
+
+.editor-item {
+    cursor: pointer;
+    position: relative;
+    border: 1px solid #000a;
+    image-rendering: auto;
+    background-size: contain;
+    background-repeat: no-repeat;
+    width: 48px;
+    height: 48px;
+}
+
+.locked-item {
+    cursor: not-allowed;
+}
+
+.locked-item::after {
+    content: "";
+    background: url("/img/misc/lock_small.webp") no-repeat center / 24px 24px, #0000009f; 
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+}
+
+.preview-container {
+    padding: 8px;
+}
+
+.preview {
+    height: 140px;
+    width: 160px;
+    background-position: -20px -20px;
+    background-repeat: no-repeat;
+    background-image: url("./img/bonzi/purple.webp");
+}
+
+.vault-body {
+    flex: 1;
+    background: linear-gradient(to bottom, #0a7179, #034e58);
+    position: relative;
+}
+
+.vault-message {
+    position: absolute;
+    height: 60px;
+    top: 20px;
+    inset-inline: 20px;
+    display: flex;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    font: 35px pusab;
+    color: white;
+    line-height: 0.7;
+    -webkit-text-stroke: 1px black;
+    text-shadow: #000000CC 2px 2px 2px;
+}
+
+.vault-input {
+    box-sizing: border-box;
+    position: absolute;
+    padding: 20px;
+    font: 40px pusab;
+    color: white;
+    top: 100px;
+    left: calc(50% - 450px / 2);
+    width: 450px;
+    border: none;
+    border-radius: 5px;
+    background: #00000088;
+    outline: none;
+    text-align: center;
+    -webkit-text-stroke: 1px black;
+    text-shadow: #000000CC 2px 2px 2px;
+}
+
+.vault-keeper-container {
+    position: absolute;
+    top: 170px;
+    bottom: 0px;
+    inset-inline: 0px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.vault-keeper img {
+    width: 50px;
+    height: 122px;
+    image-rendering: auto;
+    filter: drop-shadow(2px 2px 2px #00000088);
+    cursor: pointer;
+    /* transform-origin: 50% 25px; */
+}
+
+.vault-keeper img:active {
+    transform: scale(1.2);
+    transition: transform 0.2s cubic-bezier(0, 0, 0, 2);
+}
+
+
+/*!
+ * XP.css
+ *
+ * Copyright 2020 Adam Hammad, Jordan Scales
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+ * Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE 
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+.xp-button {
+    font-size: 11px;
+    box-sizing: border-box;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 1) 0%,
+        rgba(236, 235, 229, 1) 86%,
+        rgba(216, 208, 196, 1) 100%
+    );
+    border: 1px solid #003c74;
+    box-shadow: none;
+    border-radius: 3px;
+    min-height: 23px;
+    padding: 0 12px;
+}
+
+.xp-button:not(:disabled):active {
+    box-shadow: none;
+    background: linear-gradient(
+        180deg,
+        rgba(205, 202, 195, 1) 0%,
+        rgba(227, 227, 219, 1) 8%,
+        rgba(229, 229, 222, 1) 94%,
+        rgba(242, 242, 241, 1) 100%
+    );
+}
+
+.xp-button:not(:disabled, :active):hover {
+    box-shadow: inset -1px 1px #fff0cf, inset 1px 2px #fdd889, inset -2px 2px #fbc761, inset 2px -2px #e5a01a;
+}
+
+.poll-creator-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+}
+
+.poll-title {
+    padding: 4px;
+    font-family: "Tahoma", sans-serif;
+    font-size: 14px;
+    height: 60px;
+    resize: vertical;
+}
+
+.poll-options {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 4px;
+    overflow-y: auto;
+}
+
+.poll-option-row {
+    display: flex;
+    gap: 4px;
+}
+
+.poll-option-row input {
+    flex: 1;
+    padding: 4px;
+}
+
+.poll-buttons {
+    display: flex;
+    justify-content: end;
+    gap: 8px;
+}
+
+.poll_option {
+    margin: 2px 0;
+    padding: 4px;
+    cursor: pointer;
+    border-width: 1px;
+    border-style: solid;
+    user-select: none;
+}
+
+.upload_dropzone {
+    border: 1px solid #645436;
+    background: url("/img/misc/upload.svg") no-repeat center / 50px 50px;
+    flex: 1;
+    cursor: pointer;
+}
+
+.upload_buttons {
+    display: flex;
+    justify-content: end;
+    gap: 8px;
+}
+
+.upload_icon {
+    height: 1rem;
+    vertical-align: bottom;
 }
