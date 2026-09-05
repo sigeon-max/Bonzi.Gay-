@@ -12,6 +12,14 @@ window.BonziData = {
 		x: 200,
 		y: 160
 	},
+	colors: {
+		normal: ["purple", "blue", "green", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse", "jew", "patrick", "lightbulb", "martian", "grinnyboi", "yume", "k1o", "izhan"]
+	},
+	hats: {
+		normal: ["tophat", "bfdi", "bieber", "evil", "elon", "kamala", "maga", "troll", "bucket", "obama", "dank", "witch", "wizard", "emoji", "ronaldo"],
+		vault: [],
+		event: []
+	},
 	sprite: {
 		frames: { width: 200, height: 160 },
 		animations: {
