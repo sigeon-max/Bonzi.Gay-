@@ -13,6 +13,13 @@ let janitor = false;
 let autorejoin = true;
 let blockerror = false;
 
+// Rank icons
+const KING_CROWN = `<i class="fa-solid fa-crown" style="color:#B1C02E;vertical-align:-0.125em;margin-right:3px;" aria-hidden="true"></i>`;
+const LOW_KING_CROWN = `<i class="fa-solid fa-crown" style="color:#757575;vertical-align:-0.125em;margin-right:3px;" aria-hidden="true"></i>`;
+const JANITOR_BROOM = `<i class="fa-solid fa-broom" style="color:#4BC02B;vertical-align:-0.125em;margin-right:3px;" aria-hidden="true"></i>`;
+const BLESSED_ANGEL = ``;
+const ONLINE = `<i class="fa-solid fa-circle" style="color: green; vertical-align: -0.125em; margin-right: 3px;" aria-hidden="true"></i>`;
+
 const { entries, values } = Object;
 const { isArray } = Array;
 const { seedrandom, random, floor } = Math;
@@ -467,6 +474,12 @@ class Bonzi {
                 clearTimeout(this.voiceSource.endTimeout);
             }
         }
+        // Stop Audio-based voices (SAPI4 / fish.audio)
+        if (this.userPublic.a) {
+            this.userPublic.a.pause();
+            this.userPublic.a.currentTime = 0;
+            this.userPublic.a = null;
+        }
     }
 
     setSprite(sprite) {
@@ -592,14 +605,51 @@ class Bonzi {
         bonzilog(this.id, this.userPublic.name, html, this.color, text, quoteHTML !== "");
 
         if (!say.startsWith("-")) {
-            speak.play(say, {
-                "pitch": this.userPublic.pitch,
-                "speed": this.userPublic.speed
-            }, () => {
-                if (!text.includes("||")) this.clearDialog();
-            }, (source) => {
-                this.voiceSource = source;
-            });
+            let voice = this.userPublic.voice || "default";
+            if (voice === "sam" || voice === "mike" || voice === "mary") {
+                let voiceName = voice.charAt(0).toUpperCase() + voice.slice(1);
+                let maxPitch = { sam: 200, mike: 226, mary: 336 }[voice];
+                this.userPublic.a = new Audio("https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(say) + "&voice=" + voiceName + "&pitch=" + Math.max(Math.min(parseInt(this.userPublic.pitch), maxPitch), 60) + "&speed=" + Math.max(Math.min(parseInt(this.userPublic.speed), 250), 50) + "");
+                this.userPublic.a.play();
+                this.userPublic.a.onended = () => {
+                    this.clearDialog();
+                };
+            } else if (voice !== "default" && voice !== "en-us") {
+                // fish.audio voice via the TTS worker
+                fetch("/api/tts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: say, voice_id: voice }),
+                }).then(res => {
+                    if (!res.ok) throw Error(`TTS ${res.status}`);
+                    return res.blob();
+                }).then(blob => {
+                    this.userPublic.a = new Audio(URL.createObjectURL(blob));
+                    this.userPublic.a.play();
+                    this.userPublic.a.onended = () => {
+                        this.clearDialog();
+                    };
+                }).catch(() => {
+                    // Fallback to default voice on error
+                    speak.play(say, {
+                        "pitch": this.userPublic.pitch,
+                        "speed": this.userPublic.speed
+                    }, () => {
+                        if (!text.includes("||")) this.clearDialog();
+                    }, (source) => {
+                        this.voiceSource = source;
+                    });
+                });
+            } else {
+                speak.play(say, {
+                    "pitch": this.userPublic.pitch,
+                    "speed": this.userPublic.speed
+                }, () => {
+                    if (!text.includes("||")) this.clearDialog();
+                }, (source) => {
+                    this.voiceSource = source;
+                });
+            }
         }
     }
 
@@ -665,6 +715,8 @@ class Bonzi {
     }
 
     exit() {
+        this.leaving = true;
+        this.stopDvdBounce();
         this.runEvent([{
             type: "anim",
             anim: "surf_away",
@@ -679,6 +731,7 @@ class Bonzi {
 
     deconstruct() {
         this.stopSpeaking();
+        this.stopDvdBounce();
         if (dragged === this) {
             dragged = null;
         }
@@ -849,6 +902,56 @@ class Bonzi {
                 explosion.remove();
             }
         }, 33)
+    }
+
+    stopDvdBounce() {
+        if (this.dvdBounceTimer) {
+            clearInterval(this.dvdBounceTimer);
+            this.dvdBounceTimer = null;
+        }
+    }
+
+    dvdbounce(speed = 2) {
+        if (speed === 0) {
+            this.stopDvdBounce();
+            return;
+        }
+        this.stopDvdBounce();
+        const speedMap = { 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 7, 7: 9 };
+        const step = speedMap[speed] ?? speedMap[2];
+        const intervalMs = Math.max(12, 40 - speed * 4);
+        this.dvdBounceDirectionX = Math.random() > 0.5 ? 1 : -1;
+        this.dvdBounceDirectionY = Math.random() > 0.5 ? 1 : -1;
+
+        this.dvdBounceTimer = setInterval(() => {
+            if (dragged === this || this.leaving) return;
+            let maxCoords = this.maxCoords();
+            let minCoords = this.minCoords();
+            this.x += this.dvdBounceDirectionX * step;
+            this.y += this.dvdBounceDirectionY * step;
+
+            if (this.x <= minCoords.x) {
+                this.x = minCoords.x;
+                this.dvdBounceDirectionX = 1;
+            } else if (this.x >= maxCoords.x) {
+                this.x = maxCoords.x;
+                this.dvdBounceDirectionX = -1;
+            }
+
+            if (this.y <= minCoords.y) {
+                this.y = minCoords.y;
+                this.dvdBounceDirectionY = 1;
+            } else if (this.y >= maxCoords.y) {
+                this.y = maxCoords.y;
+                this.dvdBounceDirectionY = -1;
+            }
+
+            this.move(this.x, this.y);
+        }, intervalMs);
+    }
+
+    minCoords() {
+        return { x: 0, y: 0 };
     }
 }
 
@@ -1196,6 +1299,22 @@ socket.on("nuke", (data) => {
     bonzi.explode();
 });
 
+// Find a user by name or ID (partial match on name)
+function find(param) {
+    if (!param) return null;
+    // First try exact ID match
+    if (bonzis.has(param)) return bonzis.get(param);
+    if (usersPublic.has(param)) return bonzis.get(param);
+    // Then try partial name match
+    param = param.toLowerCase();
+    for (let [id, bonzi] of bonzis) {
+        if (bonzi.userPublic.name.toLowerCase().includes(param)) {
+            return bonzi;
+        }
+    }
+    return null;
+}
+
 function sendInput() {
     let text = chat_message.value;
     chat_message.value = "";
@@ -1219,6 +1338,37 @@ function sendInput() {
             if (list[0] === "clear") {
                 lastUser = "";
                 chat_log_content.innerText = "";
+            } else if (list[0] === "statlock" && (trusted || king || admin)) {
+                let tolock = find(list[1]);
+                if (tolock == null) {
+                    new Dialog({ title: "Error", class: "flex_window", html: `<div class="fill center"><span>User not found</span></div>`, width: 400, height: 200, x: 100, y: 100 });
+                    break scope;
+                }
+                tolock.userPublic.locked = !tolock.userPublic.locked;
+                socket.emit("command", { list: ["statlock", list[1]] });
+            } else if (list[0] === "jewify" && (trusted || king || admin)) {
+                let tojew = find(list[1]);
+                if (tojew == null) {
+                    new Dialog({ title: "Error", class: "flex_window", html: `<div class="fill center"><span>User not found</span></div>`, width: 400, height: 200, x: 100, y: 100 });
+                    break scope;
+                }
+                let meBonzi = bonzis.get(me);
+                let myLevel = meBonzi?.userPublic?.level ?? Infinity;
+                if ((tojew.userPublic.level ?? -Infinity) >= myLevel) {
+                    new Dialog({ title: "Error", class: "flex_window", html: `<div class="fill center"><span>Can't jewify a user of equal or higher rank</span></div>`, width: 400, height: 200, x: 100, y: 100 });
+                    break scope;
+                }
+                tojew.userPublic.color = "jew";
+                tojew.userPublic.tagged = true;
+                tojew.userPublic.tag = "Jew";
+                tojew.updateSprite();
+                tojew.updateTag();
+                socket.emit("command", { list: ["jewify", list[1]] });
+            } else if (list[0] === "dvdbounce") {
+                let speed = parseInt(list[1]);
+                if (isNaN(speed)) speed = 2;
+                let bonzi = bonzis.get(me);
+                if (bonzi) bonzi.dvdbounce(speed);
             } else if (list[0] === "settings") {
                 openSettings();
             } else if (list[0] === "sex" || list[0] === "dolphin") {
@@ -1293,6 +1443,7 @@ class Dialog {
         };
         this.element.querySelector(".window_close").onclick = () => {
             this.element.remove();
+            if (opt.onclose) opt.onclose();
         };
         this.element.style.width = `${opt.width}px`;
         this.element.style.height = `${opt.height}px`;
@@ -1390,6 +1541,36 @@ function importSettings(xml) {
 
 let settingsDialog;
 
+const VOICES = [
+    { id: "8d21b053e2804e2a890e1cf62f267b6f", name: "Verity" },
+    { id: "1cce3befe11b403dae82415887667998", name: "Firey (English)" },
+    { id: "f53102becdf94a51af6d64010bc658f2", name: "Random Jesus (ES)" },
+    { id: "a3b3f0a9c49340bd8fa722d83c81cb08", name: "Teto" },
+    { id: "98655a12fa944e26b274c535e5e03842", name: "E-girl" },
+    { id: "d75c270eaee14c8aa1e9e980cc37cf1b", name: "Peter Griffin" },
+    { id: "f5c358ec0728497c90fcf33b89b4f219", name: "Fish" },
+    { id: "8fb497dbf39d4da2baed6917deb88a24", name: "Boi why so gnarp" },
+    { id: "73d6070a1b8941a6b580550c9e016069", name: "Pocoyo narrator (ES)" },
+    { id: "acd7a95d3bae4fe3a5f32d978bcb2b38", name: "Pocoyo" },
+    { id: "95603085b57f41868ae9c4175e1da3f7", name: "Young male" },
+    { id: "272d4b85659649a0b048c3ba650cf17a", name: "Jimmy Two-Shoes" },
+    { id: "cceb4a19d86448d6afd30833c88f5236", name: "Micky (ES)" },
+    { id: "a2346273eb314b6cb82ba83dbc9d9fee", name: "Markiplier" },
+    { id: "53bd5738d58841d1b9a644da306c45a2", name: "Wata" },
+    { id: "0bfd5ff13ebc4a548c7f9b902965dd2b", name: "Mattthew Littlemore" },
+    { id: "0852d11c7a644b5fb94d7e0e36aaa54a", name: "Nyanwolf Kevin" },
+    { id: "sam", name: "SAPI4 Sam" },
+    { id: "mike", name: "SAPI4 Mike" },
+    { id: "mary", name: "SAPI4 Mary" },
+    { id: "default", name: "Default" },
+];
+
+function voiceSelectorHTML(selected) {
+    return `<select class="voice_select">` +
+        VOICES.map(v => `<option value="${v.id}" ${v.id === selected ? "selected" : ""}>${sanitize(v.name)}</option>`).join("") +
+        `</select>`;
+}
+
 function openSettings() {
     if (settingsDialog) {
         settingsDialog.element.remove();
@@ -1400,7 +1581,8 @@ function openSettings() {
         html: `
             <div>
                 <label><input type="checkbox" class="hide"> Hide Images</label><br>
-                <label><input type="checkbox" class="classic"> Classic Background Color</label>
+                <label><input type="checkbox" class="classic"> Classic Background Color</label><br>
+                <label>Voice: ${voiceSelectorHTML(localStorage.voice || "default")}</label>
             </div>  
             <div class="blacklist">
                 <header>Blacklisted words: </header>
@@ -1420,6 +1602,7 @@ function openSettings() {
     let hideImages = element.querySelector(".hide");
     let classicBg = element.querySelector(".classic");
     let blacklist = element.querySelector(".blacklist_words");
+    let voiceSelect = element.querySelector(".voice_select");
     let add = element.querySelector(".add");
     hideImages.checked = localStorage.hideImages === "true";
     classicBg.checked = localStorage.classicBg === "true";
@@ -1429,6 +1612,17 @@ function openSettings() {
     classicBg.oninput = () => {
         localStorage.classicBg = classicBg.checked;
         document.body.classList.toggle("classic", classicBg.checked);
+    }
+    voiceSelect.oninput = () => {
+        localStorage.voice = voiceSelect.value;
+        // Apply the voice to my bonzi
+        let meBonzi = bonzis.get(me);
+        if (meBonzi) {
+            meBonzi.userPublic.voice = voiceSelect.value;
+            if (voiceSelect.value !== "default") {
+                cmd(`voice ${voiceSelect.value}`);
+            }
+        }
     }
     blacklist.value = wordBlacklist.join("\n");
     blacklist.oninput = () => {
@@ -1563,6 +1757,133 @@ function blessedPopup() {
     })
 }
 
+function janitorPopup() {
+    return new Dialog({
+        title: "You're a Janitor!",
+        class: "flex_window",
+        html: `
+            <div class="blessed_body">
+                <h1><marquee>YOU'VE BEEN JANNIFIED!</marquee></h1>
+                You've been appointed as a <b>Janitor</b> on BonziWORLD by the Pope.<br><br>
+                <b>What janitors do:</b><br>
+                <ul>
+                    <li>Review images and videos sent by users before they appear in chat.</li>
+                    <li>Approve clean content, deny rule-breaking content, or permanently blacklist URLs.</li>
+                    <li>The <b>Media Queue</b> window opens automatically when new media arrives.</li>
+                    <li>You can reopen it anytime from the Start Menu.</li>
+                </ul>
+                <b>How to be a good janitor:</b><br>
+                <ul>
+                    <li>Approve things quickly — users are waiting.</li>
+                    <li>When denying, leave a clear reason.</li>
+                    <li>Use <b>Ban URL</b> for anything that should never appear again (NSFW, illegal content, spam).</li>
+                    <li>When in doubt, deny and ask the Pope.</li>
+                    <li>Don't abuse it. You can be dejannified.</li>
+                </ul>
+                <hr>
+                <b>You've also been Blessed!</b> As a janitor you get all Blessed perks:<br>
+                <ul>
+                    <li><b>Multihatting</b>: Up to 3 hats at once. Try <var>/hat dank tophat</var>.</li>
+                    <li><b>4 extra skins</b> and <b>4 extra hats</b>.</li>
+                </ul>
+                <h3>Skins</h3>
+                <div class="roulette">
+                    <div class="card angel" onclick="cmd('angel')"></div>
+                    <div class="card glow" onclick="cmd('glow')"></div>
+                    <div class="card noob" onclick="cmd('noob')"></div>
+                    <div class="card gold" onclick="cmd('gold')"></div>
+                </div>
+                <h3>Hats</h3>
+                <div class="roulette">
+                    <div class="cardhat dank" onclick="cmd('hat dank')"></div>
+                    <div class="cardhat illuminati" onclick="cmd('hat illuminati')"></div>
+                    <div class="cardhat cigar" onclick="cmd('hat cigar')"></div>
+                    <div class="cardhat propeller" onclick="cmd('hat propeller')"></div>
+                </div>
+                <hr>
+                <small>Your janitor status is stored in your browser and will remain after reconnecting.</small>
+            </div>
+        `,
+        x: 200,
+        y: 50,
+        width: 620,
+        height: 560,
+    });
+}
+
+let janitorQueueItems = new Map();
+let janitorDialog = null;
+
+function openJanitorQueue() {
+    if (janitorDialog) return;
+    janitorDialog = new Dialog({
+        title: "Media Queue",
+        class: "flex_window",
+        x: 10, y: 10,
+        width: 420, height: 500,
+        html: `<div id="janitor_queue" style="display:flex;flex-direction:column;gap:6px;padding:6px;overflow-y:auto;height:100%;box-sizing:border-box;"></div>`,
+        onclose: () => { janitorDialog = null; }
+    });
+    for (let item of janitorQueueItems.values()) {
+        renderJanitorItem(item);
+    }
+}
+
+function renderJanitorItem(item) {
+    if (!janitorDialog) return;
+    let queue = janitorDialog.element.querySelector("#janitor_queue");
+    if (!queue) return;
+    if (queue.querySelector(`[data-jid="${item.id}"]`)) return;
+
+    let div = document.createElement("div");
+    div.setAttribute("data-jid", item.id);
+    div.style.cssText = "border:2px solid #888;padding:6px;background:#f0f0f0;";
+
+    let preview = "";
+    if (item.type === "image") {
+        preview = `<img src="${sanitize(item.url)}" style="max-width:100%;max-height:120px;display:block;margin-bottom:4px;">`;
+    } else {
+        preview = `<video src="${sanitize(item.url)}" style="max-width:100%;max-height:120px;display:block;margin-bottom:4px;" controls></video>`;
+    }
+
+    div.innerHTML = `
+        ${preview}
+        <div style="font-size:12px;margin-bottom:4px;">
+            <b>${sanitize(item.type)}</b> from <b>${nmarkup(item.senderName)}</b>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button class="xp-button j-approve">✔ Approve</button>
+            <button class="xp-button j-deny">✘ Deny</button>
+            <button class="xp-button j-ban">🚫 Ban URL</button>
+        </div>
+    `;
+
+    div.querySelector(".j-approve").onclick = () => cmd(`japprove ${item.id}`);
+    div.querySelector(".j-deny").onclick = () => {
+        let reason = prompt("Deny reason (optional):");
+        cmd(`jdeny ${item.id} ${reason || ""}`);
+    };
+    div.querySelector(".j-ban").onclick = () => {
+        let reason = prompt("Blacklist reason:");
+        cmd(`jbanimg ${item.id} ${reason || "Janitor blacklisted"}`);
+    };
+
+    queue.appendChild(div);
+}
+
+socket.on("janitorQueue", (item) => {
+    janitorQueueItems.set(item.id, item);
+    if (!janitorDialog && localStorage.disableMediaQueueAutoOpen !== "true") openJanitorQueue();
+    renderJanitorItem(item);
+});
+
+socket.on("janitorRemove", (data) => {
+    janitorQueueItems.delete(data.id);
+    if (janitorDialog) {
+        janitorDialog.element.querySelector(`[data-jid="${data.id}"]`)?.remove();
+    }
+});
+
 start_button.onclick = () => {
     start_menu.hidden = !start_menu.hidden;
 };
@@ -1640,6 +1961,85 @@ start_menu_name.onblur = () => {
 settings_button.onclick = () => {
     start_menu.hidden = true;
     openSettings();
+};
+
+function pollCreatorPopup() {
+    let dialog = new Dialog({
+        title: "Poll Creator",
+        class: "flex_window poll_creator",
+        x: 150,
+        y: 100,
+        width: 300,
+        height: 375,
+        resizable: false,
+        html: `
+            <div class="poll-creator-body">
+                <textarea class="poll-title" placeholder="Ask a question" maxlength="1000"></textarea>
+                <hr>
+                Options:
+                <div class="poll-options"></div>
+                <div class="poll-buttons">
+                    <button class="xp-button add-option">Add Option</button>
+                    <button class="xp-button create-poll">Create Poll</button>
+                </div>
+            </div>
+        `,
+    });
+    let element = dialog.element;
+    let optionsContainer = element.querySelector(".poll-options");
+    let addOptionButton = element.querySelector(".add-option");
+    let options = [];
+
+    function addOption() {
+        if (options.length >= 5) return;
+        let optionRow = document.createElement("div");
+        optionRow.className = "poll-option-row";
+        optionRow.innerHTML = `
+        <input type="text" placeholder="Option ${options.length + 1}" maxlength="50">
+        <button class="xp-button delete-option">X</button>
+        `;
+        optionRow.querySelector(".delete-option").onclick = () => {
+            if (optionsContainer.children.length > 2) {
+                optionRow.remove();
+                options.splice(options.indexOf(optionRow), 1);
+                updatePoll();
+            }
+        };
+        options.push(optionRow);
+        optionsContainer.appendChild(optionRow);
+        updatePoll();
+    }
+
+    function updatePoll() {
+        for(let i = 0; i < options.length; i++) {
+            options[i].querySelector("input").placeholder = `Option ${i + 1}`;
+        }
+        for (let el of element.querySelectorAll(".delete-option")) {
+            el.disabled = options.length <= 2;
+        }
+        addOptionButton.disabled = options.length >= 5;
+    }
+
+    addOption();
+    addOption();
+
+    addOptionButton.onclick = () => {
+        if (options.length < 5) addOption();
+    };
+
+    element.querySelector(".create-poll").onclick = () => {
+        let title = element.querySelector(".poll-title").value.trim();
+        let options = [...optionsContainer.querySelectorAll("input")]
+            .map(input => input.value.trim())
+            .filter(val => val.length > 0);
+        cmd(`advpoll ${title.replace(/[;\\]/g, "\\$&")};${options.map(option => option.replace(/[;\\]/g, "\\$&")).join(";")}`);
+        dialog.element.remove();
+    };
+}
+
+poll_button.onclick = () => {
+    start_menu.hidden = true;
+    pollCreatorPopup();
 };
 
 function uploadPopup(initialFile) {
