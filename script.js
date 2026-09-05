@@ -349,6 +349,33 @@ class Bonzi {
                                     });
                                 }
                             },
+                            "funmod": {
+                                name: "Fun (MOD)",
+                                type: "sub",
+                                items: {
+                                    "jewify": {
+                                        name: "Jewify",
+                                        callback: () => {
+                                            socket.emit("command", {
+                                                list: ["jewify", this.id],
+                                            });
+                                        }
+                                    },
+                                    "statlock": {
+                                        name: () => this.userPublic.locked ? "Stat Unlock" : "Stat Lock",
+                                        callback: () => {
+                                            socket.emit("command", {
+                                                list: ["statlock", this.id],
+                                            });
+                                        }
+                                    },
+                                    "jannify": {
+                                        name: () => this.userPublic.broom ? "Dejannify" : "Jannify",
+                                        callback: () => { cmd(`${this.userPublic.broom ? "dejannify" : "jannify"} ${this.id}`); },
+                                        visible: () => pope,
+                                    },
+                                }
+                            },
                             ...(admin ? {
                                 "ban": {
                                     name: "Ban",
@@ -562,6 +589,7 @@ class Bonzi {
     }
 
     talk(text, say, { quote, french } = {}) {
+        let self = this;
         if (say == null) say = text;
         this.stopSpeaking();
         this.bubble.hidden = false;
@@ -608,49 +636,64 @@ class Bonzi {
         bonzilog(this.id, this.userPublic.name, html, this.color, text, quoteHTML !== "");
 
         if (!say.startsWith("-")) {
-            let voice = this.userPublic.voice || "default";
-            if (voice === "sam" || voice === "mike" || voice === "mary") {
-                let voiceName = voice.charAt(0).toUpperCase() + voice.slice(1);
-                let maxPitch = { sam: 200, mike: 226, mary: 336 }[voice];
-                this.userPublic.a = new Audio("https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(say) + "&voice=" + voiceName + "&pitch=" + Math.max(Math.min(parseInt(this.userPublic.pitch), maxPitch), 60) + "&speed=" + Math.max(Math.min(parseInt(this.userPublic.speed), 250), 50) + "");
+            if (this.userPublic.voice == "sam") {
+
+                this.userPublic.a = new Audio("https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(say) + "&voice=Sam&pitch=" + Math.max(Math.min(parseInt(this.userPublic.pitch), 200), 60) + "&speed=" + Math.max(Math.min(parseInt(this.userPublic.speed), 250), 50) + "");
                 this.userPublic.a.play();
-                this.userPublic.a.onended = () => {
-                    this.clearDialog();
-                };
-            } else if (voice !== "default" && voice !== "en-us") {
+                this.userPublic.a.onended = function() {
+                    self.clearDialog()
+                }
+
+            } else if (this.userPublic.voice == "mike") {
+
+                this.userPublic.a = new Audio("https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(say) + "&voice=Mike&pitch=" + Math.max(Math.min(parseInt(this.userPublic.pitch), 226), 60) + "&speed=" + Math.max(Math.min(parseInt(this.userPublic.speed), 250), 50) + "");
+                this.userPublic.a.play();
+                this.userPublic.a.onended = function() {
+                    self.clearDialog()
+                }
+
+            } else if (this.userPublic.voice == "mary") {
+
+                this.userPublic.a = new Audio("https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(say) + "&voice=Mary&pitch=" + Math.max(Math.min(parseInt(this.userPublic.pitch), 336), 60) + "&speed=" + Math.max(Math.min(parseInt(this.userPublic.speed), 250), 50) + "");
+                this.userPublic.a.play();
+                this.userPublic.a.onended = function() {
+                    self.clearDialog()
+                }
+
+            } else if (this.userPublic.voice !== "default" && this.userPublic.voice !== "en-us") {
                 // fish.audio voice via the TTS worker
                 fetch("/api/tts", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: say, voice_id: voice }),
+                    body: JSON.stringify({ text: say, voice_id: this.userPublic.voice }),
                 }).then(res => {
                     if (!res.ok) throw Error(`TTS ${res.status}`);
                     return res.blob();
                 }).then(blob => {
-                    this.userPublic.a = new Audio(URL.createObjectURL(blob));
-                    this.userPublic.a.play();
-                    this.userPublic.a.onended = () => {
-                        this.clearDialog();
+                    self.userPublic.a = new Audio(URL.createObjectURL(blob));
+                    self.userPublic.a.play();
+                    self.userPublic.a.onended = function() {
+                        self.clearDialog()
                     };
                 }).catch(() => {
                     // Fallback to default voice on error
                     speak.play(say, {
-                        "pitch": this.userPublic.pitch,
-                        "speed": this.userPublic.speed
-                    }, () => {
-                        if (!text.includes("||")) this.clearDialog();
-                    }, (source) => {
-                        this.voiceSource = source;
+                        "pitch": self.userPublic.pitch,
+                        "speed": self.userPublic.speed
+                    }, function() {
+                        if (!text.includes("||")) self.clearDialog();
+                    }, function(source) {
+                        self.voiceSource = source;
                     });
                 });
             } else {
                 speak.play(say, {
-                    "pitch": this.userPublic.pitch,
-                    "speed": this.userPublic.speed
-                }, () => {
-                    if (!text.includes("||")) this.clearDialog();
-                }, (source) => {
-                    this.voiceSource = source;
+                    "pitch": self.userPublic.pitch,
+                    "speed": self.userPublic.speed
+                }, function() {
+                    if (!text.includes("||")) self.clearDialog();
+                }, function(source) {
+                    self.voiceSource = source;
                 });
             }
         }
