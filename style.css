@@ -1116,10 +1116,16 @@ gay-rainbow code {
 .angel { background-image: url("img/bonzi/blessed.webp"); }
 .glow { background-image: url("img/bonzi/glow.webp"); }
 .noob { background-image: url("img/bonzi/noob.webp"); }
+.gold { background-image: url("img/bonzi/gold.webp"); }
+.spongebob { background-image: url("img/bonzi/spongebob.webp"); }
+.facty { background-image: url("img/bonzi/facty.webp"); }
+.lavenderribbon { background-image: url("img/bonzi/lavenderribbon.webp"); }
 .dank { background-image: url("img/bonzi/dank.webp"); }
 .illuminati { background-image: url("img/bonzi/illuminati.webp"); }
 .cigar { background-image: url("img/bonzi/cigar.webp"); }
 .bear { background-image: url("img/bonzi/bear.webp"); }
+.redhat { background-image: url("img/bonzi/redhat.webp"); }
+.silverchain { background-image: url("img/bonzi/silverchain.webp"); }
 
 .explosion {
     width: 71px;
