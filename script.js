@@ -917,8 +917,16 @@ function bonzisCheck() {
             }
         } else {
             let bonzi = bonzis.get(key);
+            let oldName = bonzi.userPublic.name;
+            let oldTyping = bonzi.userPublic.typing;
             bonzi.userPublic = public;
-            bonzi.updateName();
+            if (oldName !== public.name) {
+                let msg = `${nisolate(oldName)} is now known as ${nisolate(public.name)}.`;
+                bonzilog("server", "", markup(msg), null, msg, true)
+            }   
+            if (oldTyping !== public.typing || oldName !== public.name) {
+                bonzi.updateName();
+            }
             bonzi.updateTag();
             if (bonzi.color != public.color) {
                 bonzi.color = public.color;
@@ -926,13 +934,21 @@ function bonzisCheck() {
             }
             safeBonzis.add(bonzi);
         }
+        if (key === me) {
+            start_menu_name.value = public.name;
+            start_menu_pfp.style.backgroundImage = public.color.split(" ").map(color => `url("/img/pfp/${color}.webp")`).reverse().join(", ");
+            for (let preview of document.getElementsByClassName("preview")) {
+                preview.style.backgroundImage = public.color.split(" ").map(color => `url("/img/bonzi/${color}.webp")`).reverse().join(", ");
+            }
+        }
     }
+    usercount.innerText = usersPublic.size;
     for (let bonzi of bonzis.values()) {
         if (!safeBonzis.has(bonzi)) {
             bonzi.exit();
         }
     }
-    usercount.innerText = usersPublic.size;
+
 };
 
 setInterval(() => {
@@ -946,11 +962,14 @@ let socket = io("//");
 let usersPublic = new Map;
 let bonzis = new Map;
 
+login_name.value = localStorage.name || "";
+
 function login() {
     socket.emit("login", {
         name: login_name.value,
         room: login_room.value,
     });
+    localStorage.name = login_name.value;
     setup();
 }
 
