@@ -441,6 +441,7 @@ body.vaporwave #chat_send:active {
     width: 100px;
 }
 
+
 #chat_send:hover, #start_button:hover {
     background-position: 0 -33px;
 }
