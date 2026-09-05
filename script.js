@@ -12,6 +12,8 @@ let king = false;
 let janitor = false;
 let autorejoin = true;
 let blockerror = false;
+let me = null;        // my guid, set by the server in "updateAll"
+let unlocks = [];     // hats unlocked from the vault
 
 // Rank icons
 const KING_CROWN = `<i class="fa-solid fa-crown" style="color:#B1C02E;vertical-align:-0.125em;margin-right:3px;" aria-hidden="true"></i>`;
@@ -140,8 +142,8 @@ let dragX = 0;
 let dragY = 0;
 let chatLogDragged = false;
 
-let colors = ["purple", "blue", "green", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse",  "jew",  "patrick",  "lightbulb",  "martian",  "grinnyboi",  "yume",  "k1o"];
-let hats = ["tophat", "bfdi", "bieber", "evil", "elon", "kamala", "maga", "troll", "bucket", "obama", "dank", "witch", "wizard"]
+let colors = ["purple", "blue", "green", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse",  "jew",  "patrick",  "lightbulb",  "martian",  "grinnyboi",  "yume",  "k1o", "izhan"];
+let hats = ["tophat", "bfdi", "bieber", "evil", "elon", "kamala", "maga", "troll", "bucket", "obama", "dank", "witch", "wizard", "emoji", "ronaldo"]
 
 let quote = null;
 let lastUser = "";
@@ -495,11 +497,12 @@ class Bonzi {
 
     update() {
         let anim = this.data.sprite.animations[this.currentAnim];
-        let frame = anim[this.animFrame];
+        // Single-frame animations are plain numbers (e.g. idle: 0), arrays are [start, end, next, speed]
+        let frame = typeof anim === "number" ? anim : anim[this.animFrame];
         while (typeof frame === "string") {
             this.setAnim(frame);
             anim = this.data.sprite.animations[this.currentAnim];
-            frame = anim[this.animFrame];
+            frame = typeof anim === "number" ? anim : anim[this.animFrame];
         }
         if (frame != null) this.setSprite(frame);
         this.animFrame++;
@@ -1175,6 +1178,7 @@ socket.on("room", (data) => {
 
 socket.on("updateAll", (data) => {
     page_login.hidden = true;
+    me = data.me;
     usersPublic.clear();
     for (let [id, user] of entries(data.usersPublic)) {
         usersPublic.set(id, user);
@@ -1437,7 +1441,7 @@ class Dialog {
         this.y = opt.y || 0;
         this.element = document.createElement("div");
         this.element.classList.add("window");
-        if (opt.class) this.element.classList.add(opt.class);
+        if (opt.class) this.element.classList.add(...String(opt.class).split(" ").filter(Boolean));
         this.element.innerHTML = `
         <div class="window_header">
         ${sanitize(opt.title)}
@@ -1933,6 +1937,15 @@ function bonziEditorPopup() {
             let item = document.createElement("div");
             item.style.backgroundImage = `url("/${path}/${hat}.webp")`;
             item.className = "editor-item";
+            // Show only the first frame (200x160) of the spritesheet, scaled to the item box
+            let probe = new Image();
+            probe.onload = () => {
+                let scale = 48 / 200; // item width / frame width
+                item.style.backgroundSize = `${probe.naturalWidth * scale}px auto`;
+                item.style.backgroundPosition = "0 0";
+                item.style.height = `${48 * 160 / 200}px`; // clip to frame aspect so row 2 doesn't bleed in
+            };
+            probe.src = `/${path}/${hat}.webp`;
             if (isLocked?.(hat)) item.classList.add("locked-item");
             item.setAttribute("data-tooltip", tooltip?.(hat) ?? hat);
             item.setAttribute("data-hat", hat);
@@ -1942,13 +1955,13 @@ function bonziEditorPopup() {
             grid.appendChild(item);
         }
     }
-    itemElements(".color-grid", BonziData.colors.normal, "img/pfp", (hat) => cmd(`color ${hat}`));
-    itemElements(".hat-grid", BonziData.hats.normal, "img/haticon", (hat) => cmd(`hat ${hat}`));
-    itemElements(".unlockable-grid", BonziData.hats.vault, "img/haticon", (hat) => cmd(`hat ${hat}`), {
+    itemElements(".color-grid", BonziData.colors.normal, "img/bonzi", (hat) => cmd(`color ${hat}`));
+    itemElements(".hat-grid", BonziData.hats.normal, "img/bonzi", (hat) => cmd(`hat ${hat}`));
+    itemElements(".unlockable-grid", BonziData.hats.vault, "img/bonzi", (hat) => cmd(`hat ${hat}`), {
         isLocked: (hat) => !unlocks.includes(hat),
         tooltip: (hat) => `${hat}\nUnlocked in the vault`,
     });
-    itemElements(".unlockable-grid", BonziData.hats.event.filter(hat => unlocks.includes(hat)), "img/haticon", (hat) => cmd(`hat ${hat}`), {
+    itemElements(".unlockable-grid", BonziData.hats.event.filter(hat => unlocks.includes(hat)), "img/bonzi", (hat) => cmd(`hat ${hat}`), {
         tooltip: (hat) => `${hat}\nUnlocked in the 2026 April Fools event`,
     });
     let preview = element.querySelector(".preview");
