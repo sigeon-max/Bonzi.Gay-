@@ -9,6 +9,7 @@ if (typeof String.prototype.replaceAll === "undefined") {
 let trusted = false;
 let admin = false;
 let king = false;
+let janitor = false;
 let autorejoin = true;
 let blockerror = false;
 
@@ -1562,7 +1563,315 @@ function blessedPopup() {
     })
 }
 
+start_button.onclick = () => {
+    start_menu.hidden = !start_menu.hidden;
+};
+
+
+function bonziEditorPopup() {
+    let dialog = new Dialog({
+        title: "Bonzi Editor",
+        class: "flex_window bonzi_editor",
+        html: `
+            <div class="hbox fill">
+                <div class="hats">
+                    <h2>Colors</h1>
+                    <div class="editor-grid color-grid"></div>
+                    <h2>Hats</h1>
+                    <div class="editor-grid hat-grid"></div>
+                    <h2>Unlockable</h2>
+                    <div class="editor-grid unlockable-grid"></div>
+                </div>
+                <div class="preview-container">
+                    Preview
+                    <div class="preview"></div>
+                </div>
+            </div>
+        `,
+        x: 200,
+        y: 200,
+        width: 600,
+        height: 400,
+    });
+    let element = dialog.element;
+    function itemElements(selector, itemArray, path, callback, { isLocked, tooltip } = {}) {
+        let grid = element.querySelector(selector);
+        for (let hat of itemArray) {
+            let item = document.createElement("div");
+            item.style.backgroundImage = `url("/${path}/${hat}.webp")`;
+            item.className = "editor-item";
+            if (isLocked?.(hat)) item.classList.add("locked-item");
+            item.setAttribute("data-tooltip", tooltip?.(hat) ?? hat);
+            item.setAttribute("data-hat", hat);
+            item.onclick = () => {
+                callback(hat);
+            };
+            grid.appendChild(item);
+        }
+    }
+    itemElements(".color-grid", BonziData.colors.normal, "img/pfp", (hat) => cmd(`color ${hat}`));
+    itemElements(".hat-grid", BonziData.hats.normal, "img/haticon", (hat) => cmd(`hat ${hat}`));
+    itemElements(".unlockable-grid", BonziData.hats.vault, "img/haticon", (hat) => cmd(`hat ${hat}`), {
+        isLocked: (hat) => !unlocks.includes(hat),
+        tooltip: (hat) => `${hat}\nUnlocked in the vault`,
+    });
+    itemElements(".unlockable-grid", BonziData.hats.event.filter(hat => unlocks.includes(hat)), "img/haticon", (hat) => cmd(`hat ${hat}`), {
+        tooltip: (hat) => `${hat}\nUnlocked in the 2026 April Fools event`,
+    });
+    let preview = element.querySelector(".preview");
+    preview.style.backgroundImage = bonzis.get(me).color.split(" ").map(color => `url("/img/bonzi/${color}.webp")`).reverse().join(", ");
+}
+
+start_menu_pfp.onclick = () => {
+    start_menu.hidden = true;
+    bonziEditorPopup();
+};
+
+start_menu_name.onkeyup = (e) => {
+    if (e.key === "Enter") {
+        cmd(`name ${start_menu_name.value}`);
+    }
+};
+
+start_menu_name.onblur = () => {
+    cmd(`name ${start_menu_name.value}`);
+};
+
+settings_button.onclick = () => {
+    start_menu.hidden = true;
+    openSettings();
+};
+
+function pollCreatorPopup() {
+    let dialog = new Dialog({
+        title: "Poll Creator",
+        class: "flex_window poll_creator",
+        x: 150,
+        y: 100,
+        width: 300,
+        height: 375,
+        resizable: false,
+        html: `
+            <div class="poll-creator-body">
+                <textarea class="poll-title" placeholder="Ask a question" maxlength="1000"></textarea>
+                <hr>
+                Options:
+                <div class="poll-options"></div>
+                <div class="poll-buttons">
+                    <button class="xp-button add-option">Add Option</button>
+                    <button class="xp-button create-poll">Create Poll</button>
+                </div>
+            </div>
+        `,
+    });
+    let element = dialog.element;
+    let optionsContainer = element.querySelector(".poll-options");
+    let addOptionButton = element.querySelector(".add-option");
+    let options = [];
+
+    function addOption() {
+        if (options.length >= 5) return;
+        let optionRow = document.createElement("div");
+        optionRow.className = "poll-option-row";
+        optionRow.innerHTML = `
+        <input type="text" placeholder="Option ${options.length + 1}" maxlength="50">
+        <button class="xp-button delete-option">X</button>
+        `;
+        optionRow.querySelector(".delete-option").onclick = () => {
+            if (optionsContainer.children.length > 2) {
+                optionRow.remove();
+                options.splice(options.indexOf(optionRow), 1);
+                updatePoll();
+            }
+        };
+        options.push(optionRow);
+        optionsContainer.appendChild(optionRow);
+        updatePoll();
+    }
+
+    function updatePoll() {
+        for(let i = 0; i < options.length; i++) {
+            options[i].querySelector("input").placeholder = `Option ${i + 1}`;
+        }
+        for (let el of element.querySelectorAll(".delete-option")) {
+            el.disabled = options.length <= 2;
+        }
+        addOptionButton.disabled = options.length >= 5;
+    }
+
+    addOption();
+    addOption();
+
+    addOptionButton.onclick = () => {
+        if (options.length < 5) addOption();
+    };
+
+    element.querySelector(".create-poll").onclick = () => {
+        let title = element.querySelector(".poll-title").value.trim();
+        let options = [...optionsContainer.querySelectorAll("input")]
+            .map(input => input.value.trim())
+            .filter(val => val.length > 0);
+        cmd(`advpoll ${title.replace(/[;\\]/g, "\\$&")};${options.map(option => option.replace(/[;\\]/g, "\\$&")).join(";")}`);
+        dialog.element.remove();
+    };
+}
+
+poll_button.onclick = () => {
+    start_menu.hidden = true;
+    pollCreatorPopup();
+};
+
+function uploadPopup(initialFile) {
+    let blobUrl = null;
+    let dialog = new Dialog({
+        title: "Upload",
+        class: "flex_window",
+        x: 20,
+        y: 50,
+        width: 400,
+        height: 300,
+        html: `
+            <div class="upload_dropzone"></div>
+            <div style="height: 2px;"></div>
+            <input type="file" accept="image/*" class="upload_input" hidden>
+            <div class="upload_buttons">
+                <div class="fill"><img src="/img/misc/logo.png" class="upload_icon"> Powered by <a href="https://catbox.moe">Catbox</a></div>
+                <button class="xp-button upload_button" disabled>Upload</button>
+            </div>
+        `,
+        onclose: () => {
+            if (blobUrl) URL.revokeObjectURL(blobUrl);
+        },
+    });
+    let element = dialog.element;
+    let dropzone = element.querySelector(".upload_dropzone");
+    let button = element.querySelector(".upload_button");
+    let fileInput = element.querySelector(".upload_input");
+    let blob = null;
+
+    function loadFile(file) {
+        if (!file) return;
+        blob = file;
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+        blobUrl = URL.createObjectURL(blob);
+        dropzone.style.background = `url("${blobUrl}") center center / contain no-repeat`;
+        button.disabled = false;
+    }
+
+    if (initialFile) loadFile(initialFile);
+
+    dropzone.onclick = () => fileInput.click();
+    fileInput.onchange = () => loadFile(fileInput.files[0]);
+
+    dropzone.ondragover = (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = "#003c74";
+    };
+
+    dropzone.ondragleave = () => {
+        dropzone.style.borderColor = "";
+    };
+
+    dropzone.ondrop = (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = "";
+        loadFile(e.dataTransfer.files[0]);
+    };
+    button.onclick = async () => {
+        if (!blobUrl) return;
+        let formData = new FormData();
+        formData.append("reqtype", "fileupload");
+        formData.append("fileToUpload", blob);
+        formData.append("time", "1h");
+        let response = await fetch("https://litterbox.catbox.moe/resources/internals/api.php", {
+            method: "POST",
+            body: formData,
+        });
+        let url = await response.text();
+        console.log(url);
+        cmd(`img ${url}`);
+        dialog.element.remove();
+    };
+}
+
+image_button.onclick = () => {
+    start_menu.hidden = true;
+    uploadPopup();
+};
+
+document.onpaste = (e) => {
+    let items = e.clipboardData.items;
+    for (let item of items) {
+        if (item.type.includes("image")) {
+            e.preventDefault();
+            let file = item.getAsFile();
+            uploadPopup(file);
+            break;
+        }
+    }
+};
+
+function vaultPopup() {
+    let dialog = new Dialog({
+        title: "THE VAULT",
+        class: "flex_window no_padding_window",
+        x: 10,
+        y: 10,
+        width: 700,
+        height: 500,
+        html: `
+            <div class="vault-body">
+                <audio autoplay src="/vault.mp3" loop hidden></audio>
+                <div class="vault-message">Maybe I should've hidden this room better...</div>
+                <input class="vault-input">
+                <div class="vault-keeper-container">
+                    <div class="vault-keeper">
+                        <img src="/img/misc/sparkybuddy.webp">
+                    </div>
+                </div>
+            </div>
+        `,
+    });
+    let element = dialog.element;
+    let input = element.querySelector(".vault-input");
+    let button = element.querySelector(".vault-keeper");
+    let label = element.querySelector(".vault-message");
+    let tag = null;
+    button.onclick = async () => {
+        let guess = input.value;
+        input.value = "";
+        let response = await fetch("/vault", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ guess, tag }),
+        });
+        let json = await response.json();
+        tag = json.tag;
+        label.innerHTML = json.message;
+        if (json.unlock && !unlocks.includes(json.unlock)) {
+            unlocks.push(json.unlock);
+            for (let item of document.getElementsByClassName("locked-item")) {
+                if (item.getAttribute("data-hat") === json.unlock) {
+                    item.classList.remove("locked-item");
+                }
+            }
+        }
+    };
+    input.onkeydown = (e) => {
+        if (e.key === "Enter") button.onclick();
+    };
+}
+
+start_menu_vault.onclick = () => {
+    vaultPopup();
+    start_menu.hidden = true;
+};
+		
 socket.on("blessed", blessedPopup);
+socket.on("janitor", janitor = true);
+socket.on("janitor", janitorPopup);
 socket.on("king", () => king = true);
 socket.on("admin", () => admin = true);
 socket.on("trusted", () => trusted = true);
