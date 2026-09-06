@@ -17,7 +17,6 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="favicons/apple-touch-icon.png">
 	<link rel="icon" type="image/png" href="favicons/favicon-32x32.png" sizes="32x32">
 	<link rel="icon" type="image/png" href="favicons/favicon-16x16.png" sizes="16x16">
-	<link rel="manifest" href="favicons/manifest.json">
 	<link rel="mask-icon" href="favicons/safari-pinned-tab.svg" color="#5bbad5">
 	<link rel="shortcut icon" href="favicons/favicon.ico">
 	<meta name="msapplication-config" content="favicons/browserconfig.xml">
@@ -77,6 +76,7 @@
 		
 		<div id="talkcard" hidden></div>
 		<table id="chat_bar"><tr>
+			<td id="start_button" role="button" tabindex="0" aria-label="Open start menu">start</td>
 			<td id="chat_send">send</td>
 			<td id="chat_message_cont"><input id="chat_message" type="text" placeholder="Enter a message"></td>
 			<td id="chat_tray">
@@ -90,7 +90,7 @@
 			<div id="login_card">
 				<input id="login_name" type="text" placeholder="Nickname">
 				<input id="login_room" type="text" placeholder="Room ID (Optional)">
-				<div id="login_go"></div>
+				<div id="login_go" role="button" tabindex="0" aria-label="Log in"></div>
 				<div id="login_error" hidden></div>
 			</div>
 			<div id="login_load" hidden>loading</div>
