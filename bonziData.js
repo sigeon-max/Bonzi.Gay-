@@ -13,7 +13,7 @@ window.BonziData = {
 		y: 160
 	},
 	colors: {
-		normal: ["purple", "blue", "green", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse", "jew", "patrick", "lightbulb", "martian", "grinnyboi", "yume", "k1o", "izhan"]
+		normal: ["purple", "blue", "green", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse", "peedy", "genie", "merlin", "clippit", "robby", "jew", "patrick", "lightbulb", "martian", "grinnyboi", "yume", "k1o", "izhan"]
 	},
 	hats: {
 		normal: ["tophat", "bfdi", "bieber", "evil", "elon", "kamala", "maga", "troll", "bucket", "obama", "dank", "witch", "wizard", "emoji", "ronaldo"],
@@ -21,6 +21,8 @@ window.BonziData = {
 		event: []
 	},
 	sprite: {
+		w: 3400,
+		h: 3360,
 		frames: { width: 200, height: 160 },
 		animations: {
                 idle: 0,
@@ -142,6 +144,25 @@ window.BonziData = {
 				text: "But I'll do it anyway. Because you want me to. I hope you're happy."
 			}
 		], [
+						{
+				type: "text",
+				text: "Prepare for something Seamus never heard of, {NAME}"
+			},
+			{
+				type: "anim",
+				anim: "praise_fwd",
+				ticks: 15
+			},
+			{
+				type: "text",
+				say: "HUMOR!"
+			},
+			{
+				type: "anim",
+				anim: "praise_back",
+				ticks: 15
+			}
+		], [
 			{
 				type: "text",
 				text: "{NAME} used /joke. Whoop-dee-fucking doo."
@@ -168,6 +189,38 @@ window.BonziData = {
 			{
 				type: "text",
 				text: "Senpai {NAME} wants me to tell a joke."
+			}
+		], [
+
+						{
+				type: "text",
+				text: "THE FOLLOWING JOKE MAY OFFEND PEOPLE. IF YOU ARE OFFENDED, PLEASE GO TO WATCHPEOPLELIVE.TV"
+			}
+		], [
+									{
+				type: "text",
+				text: "Ready for some classic Jewish comedy?"
+			}
+		], [
+			
+			{
+				type: "text",
+				text: "Kill yourself like a trans person, {NAME}"
+			},
+			{
+				type: "text",
+				text: "I'm not here to entertain you.",
+				say: "I'm not here to entertain you."
+			}
+		], [
+						{
+				type: "text",
+				text: "Hey niggers prepare for a joke."
+			}
+		], [
+						{
+				type: "text",
+				text: "Prepare to be offended faggots."
 			}
 		], [
 			{
@@ -240,6 +293,42 @@ window.BonziData = {
 		], [
 			{
 				type: "text",
+				text: "Why can't asians drive?"
+			},
+			{
+				type: "text",
+				text: "Because they can't see over the steering wheel."
+			}
+		], [
+						{
+				type: "text",
+				text: "Why was six afraid of seven?"
+			},
+			{
+				type: "text",
+				text: "Because seven ate nine."
+			}
+		], [
+									{
+				type: "text",
+				text: "Who did the evil hohol piggy blame for his mistakes?"
+			},
+			{
+				type: "text",
+				text: "Himself."
+			}
+		], [
+												{
+				type: "text",
+				text: "Why did the chicken cross the road?"
+			},
+			{
+				type: "text",
+				text: "because chickens dont walk!"
+			}
+		], [
+			{
+				type: "text",
 				text: "What type of water won't freeze?"
 			},
 			{
@@ -262,7 +351,7 @@ window.BonziData = {
 			},
 			{
 				type: "text",
-				text: "Suck my clock."
+				text: "time to, bruh, look at the motherfucking dude!"
 			}
 		], [
 			{
@@ -389,6 +478,22 @@ window.BonziData = {
 			{
 				type: "anim",
 				anim: "grin_fwd",
+				ticks: 15
+			}
+		], [
+						{
+				type: "anim",
+				anim: "earth_fwd",
+				ticks: 15
+			},
+			{
+				type: "text",
+				text: "Did you know that GOD HATES FAGS?",
+				say: "Did you know that GOD HATES FAGS?",
+			},
+			{
+				type: "anim",
+				anim: "earth_back",
 				ticks: 15
 			}
 		], [
