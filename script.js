@@ -5,7 +5,7 @@ if (typeof String.prototype.replaceAll === "undefined") {
     }
 }
 
-// I am a child from Israel and this is my code
+// bring it in gaze done :3 -
 let trusted = false;
 let admin = false;
 let king = false;
@@ -16,6 +16,10 @@ let autorejoin = true;
 let blockerror = false;
 let me = null;        // my guid, set by the server in "updateAll"
 let unlocks = [];     // hats unlocked from the vault
+
+function hasModeratorAccess() {
+    return Boolean(trusted || king || admin);
+}
 
 // Rank icons
 const KING_CROWN = `<i class="fa-solid fa-crown" style="color:#B1C02E;vertical-align:-0.125em;margin-right:3px;" aria-hidden="true"></i>`;
@@ -43,7 +47,7 @@ function youtubeParser(url) {
 }
 
 function sanitize(text) {
-    return text
+    return String(text ?? "")
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
@@ -91,6 +95,7 @@ function markup(text) {
 function nisolate(s) { return sanitize(s); }
 
 function nmarkup(text) {
+    text = String(text ?? "");
     while (text.includes("^^") || text.includes("||") || text.includes("\\n")) {
         text = text.replaceAll("^^", "").replaceAll("||", "").replaceAll("\\n", "");
     }
@@ -146,8 +151,55 @@ let dragX = 0;
 let dragY = 0;
 let chatLogDragged = false;
 
-let colors = ["purple", "blue", "green", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse",  "jew",  "patrick",  "lightbulb",  "martian",  "grinnyboi",  "yume",  "k1o", "izhan"];
-let hats = ["tophat", "bfdi", "bieber", "evil", "elon", "kamala", "maga", "troll", "bucket", "obama", "dank", "witch", "wizard", "emoji", "ronaldo"]
+let colors = ["purple", "blue", "green", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse", "peedy", "genie","merlin", "clippit", "robby", "jew",  "patrick",  "lightbulb",  "martian",  "grinnyboi",  "yume",  "k1o", "izhan"];
+let hats = ["tophat", "bfdi", "bieber", "evil", "elon", "kamala", "maga", "troll", "bucket", "obama", "witch", "wizard", "emoji", "ronaldo"]
+
+function animationRange(begin, end) {
+    const frames = [];
+    const step = begin <= end ? 1 : -1;
+    for (let frame = begin; step > 0 ? frame <= end : frame >= end; frame += step) frames.push(frame);
+    return frames;
+}
+
+const characterAnimationBase = {
+    idle: 0,
+    surf_across_fwd: [1, 8, "surf_across_still", 1],
+    surf_across_still: 9,
+    surf_across_back: { frames: animationRange(8, 1), next: "idle", speed: 1 },
+    clap_fwd: [10, 12, "clap_still", 1],
+    clap_still: [13, 15, "clap_still", 1],
+    clap_back: { frames: animationRange(12, 10), next: "idle", speed: 1 },
+    shrug_fwd: [40, 50, "shrug_still", 1],
+    shrug_still: 50,
+    shrug_back: { frames: animationRange(50, 40), next: "idle", speed: 1 },
+    earth_fwd: [51, 57, "earth_still", 1],
+    earth_still: [58, 80, "earth_still", 1],
+    earth_back: [81, 86, "idle", 1],
+    cool_fwd: [108, 126, "cool_still", 1],
+    cool_still: 126,
+    cool_back: { frames: animationRange(124, 108), next: "idle", speed: 1 },
+    present_fwd: [137, 141, "present_still", 1],
+    present_still: 142,
+    present_back: { frames: animationRange(141, 137), next: "idle", speed: 1 },
+    grin_fwd: [182, 189, "grin_still", 1],
+    grin_still: 184,
+    grin_back: { frames: animationRange(184, 182), next: "idle", speed: 1 },
+    backflip: [331, 343, "idle", 1],
+};
+
+const characterProfiles = {
+    peedy: { width: 310, height: 256, sheetWidth: 4960, sheetHeight: 4096, animations: { surf_intro: [6, 28, "idle", 1], surf_away: [377, 400, "gone", 1], gone: 400, earth_fwd: [575, 581, "earth_still", 1], earth_still: [584, 616, "earth_still", 1], earth_back: { frames: animationRange(580, 575), next: "idle", speed: 1 }, grin_fwd: [743, 753, "grin_still", 1], grin_still: 747 } },
+    genie: { width: 256, height: 256, sheetWidth: 4096, sheetHeight: 2470, animations: { surf_intro: [86, 95, "idle", 1], surf_away: [96, 106, "gone", 1], gone: 590, shrug_fwd: [271, 275, "shrug_still", 1], earth_fwd: [385, 391, "earth_still", 1], earth_still: [391, 396, "earth_still", 1], earth_back: [397, 402, "idle", 1], grin_fwd: [161, 165, "grin_still", 1], grin_still: 165 } },
+    merlin: { width: 248, height: 256, sheetWidth: 3968, sheetHeight: 2560, animations: { surf_intro: [128, 136, "idle", 1], surf_away: [137, 149, "gone", 1], gone: 613, shrug_fwd: [174, 178, "shrug_still", 1], earth_fwd: [186, 190, "earth_still", 1], earth_still: [190, 199, "earth_still", 1], earth_back: { frames: animationRange(190, 186), next: "idle", speed: 1 }, grin_fwd: [345, 350, "grin_still", 1], grin_still: 350 } },
+    robby: { width: 256, height: 256, sheetWidth: 4096, sheetHeight: 2432, animations: { surf_intro: [53, 70, "idle", 1], surf_away: [369, 389, "gone", 1], gone: 593, shrug_fwd: [175, 177, "shrug_still", 1], earth_fwd: [290, 298, "earth_still", 1], earth_still: [300, 306, "earth_still", 1], earth_back: { frames: animationRange(298, 290), next: "idle", speed: 1 }, grin_fwd: [345, 350, "grin_still", 1], grin_still: 350 } },
+    clippit: { width: 255.75, height: 256, sheetWidth: 4092, sheetHeight: 2604, animations: { surf_intro: { frames: [347, 346, 345, 489, 490, 491, 492, 493, 0], next: "idle", speed: 1 }, surf_away: { frames: [0, 313, 314, 315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 344], next: "gone", speed: 1 }, gone: 902, grin_fwd: [743, 753, "grin_still", 1], grin_still: 747, backflip: { frames: [0, 412, 413, 414, 415, 416, 416, 417, 418, 419, 420, 419, 418, 417, 416, 415, 414, 413, 412, 0], next: "idle", speed: 1 } } },
+};
+
+function characterData(color) {
+    const profile = characterProfiles[color];
+    if (!profile) return window.BonziData;
+    return { ...window.BonziData, sprite: { ...window.BonziData.sprite, w: profile.sheetWidth, h: profile.sheetHeight, frames: { width: profile.width, height: profile.height }, animations: { ...characterAnimationBase, ...profile.animations } } };
+}
 
 let quote = null;
 let lastUser = "";
@@ -228,7 +280,7 @@ class Bonzi {
             voice: "en-us",
         };
         this.color = this.userPublic.color;
-        this.data = window.BonziData;
+        this.data = characterData(this.userPublic.color.split(" ")[0]);
 
         this.eventList = [];
         this.eventFrame = 0;
@@ -237,6 +289,7 @@ class Bonzi {
         this.sprite = 0;
 
         this.mute = false;
+        this.browserSpeech = false;
         this.id = id || s4() + s4();
 
         this.rng = new seedrandom(this.id || random());
@@ -244,6 +297,7 @@ class Bonzi {
         this.element = document.createElement("div");
         this.element.classList.add("bonzi");
         this.element.style.backgroundImage = this.toBgImg();
+        this.element.style.backgroundSize = `${this.data.sprite.w * (200 / this.data.sprite.frames.width)}px ${this.data.sprite.h * (160 / this.data.sprite.frames.height)}px`;
         this.element.style.zIndex = lastZ++;
         this.nametag = document.createElement("div");
         this.nametag.classList.add("bonzi_name");
@@ -266,7 +320,9 @@ class Bonzi {
 
         this.element.onpointerdown = (e) => {
             if (this.bubble.contains(e.target)) return;
-            if (e.which === 1) {
+            if (e.button === 0 || e.which === 1) {
+                e.preventDefault();
+                this.element.setPointerCapture?.(e.pointerId);
                 if (!gravity) dragged = this;
                 dragX = e.pageX - this.x;
                 dragY = e.pageY - this.y;
@@ -301,106 +357,69 @@ class Bonzi {
             selector: `#${this.element.id}`,
             build: () => {
                 let extra = {};
-                if (trusted || king || admin) {
-                    // coded like a true React programmer
+                if (hasModeratorAccess()) {
                     extra = {
                         "bless": {
                             name: "Bless",
-                            callback: () => {
-                                socket.emit("command", {
-                                    list: ["bless", this.id],
-                                });
-                            },
+                            callback: () => socket.emit("command", { list: ["bless", this.id] }),
                         },
                         "nameedit": {
                             name: "Change Name",
-                            callback: () => {
-                                socket.emit("command", {
-                                    list: ["nameedit", this.id, prompt("give this guy a name")],
-                                });
-                            },
+                            callback: () => socket.emit("command", { list: ["nameedit", this.id, prompt("give this guy a name")] }),
                         },
                         "tagedit": {
                             name: "Change Tag",
-                            callback: () => {
-                                socket.emit("command", {
-                                    list: ["tagedit", this.id, prompt("give this guy a tag")],
-                                });
-                            },
+                            callback: () => socket.emit("command", { list: ["tagedit", this.id, prompt("give this guy a tag")] }),
                         },
-                        ...(king || admin ? {
-                            "kick": {
-                                name: "Kick",
-                                callback: () => {
-                                    socket.emit("command", {
-                                        list: ["kick", this.id],
-                                    });
+                        "funmod": {
+                            name: "Fun (MOD)",
+                            type: "sub",
+                            items: {
+                                "jewify": {
+                                    name: "Jewify",
+                                    callback: () => socket.emit("command", { list: ["jewify", this.id] }),
+                                },
+                                "statlock": {
+                                    name: () => this.userPublic.locked ? "Stat Unlock" : "Stat Lock",
+                                    callback: () => socket.emit("command", { list: ["statlock", this.id] }),
+                                },
+                                "jannify": {
+                                    name: () => this.userPublic.broom ? "Dejannify" : "Jannify",
+                                    callback: () => socket.emit("command", { list: ["jannify", this.id] }),
+                                    visible: () => pope,
                                 },
                             },
-                            "teFbwmpban": {
+                        },
+                    };
+                    if (king || admin) {
+                        Object.assign(extra, {
+                            "kick": {
+                                name: "Kick",
+                                callback: () => socket.emit("command", { list: ["kick", this.id] }),
+                            },
+                            "tempban": {
                                 name: "Temp Ban",
-                                callback: () => {
-                                    socket.emit("command", {
-                                        list: ["tempban", this.id],
-                                    });
-                                }
+                                callback: () => socket.emit("command", { list: ["tempban", this.id] }),
                             },
                             "nuke": {
                                 name: "NUKE",
-                                callback: () => {
-                                    socket.emit("command", {
-                                        list: ["nuke", this.id],
-                                    });
-                                }
+                                callback: () => socket.emit("command", { list: ["nuke", this.id] }),
                             },
-                            "funmod": {
-                                name: "Fun (MOD)",
-                                type: "sub",
-                                items: {
-                                    "jewify": {
-                                        name: "Jewify",
-                                        callback: () => {
-                                            socket.emit("command", {
-                                                list: ["jewify", this.id],
-                                            });
-                                        }
-                                    },
-                                    "statlock": {
-                                        name: () => this.userPublic.locked ? "Stat Unlock" : "Stat Lock",
-                                        callback: () => {
-                                            socket.emit("command", {
-                                                list: ["statlock", this.id],
-                                            });
-                                        }
-                                    },
-                                    "jannify": {
-                                        name: () => this.userPublic.broom ? "Dejannify" : "Jannify",
-                                        callback: () => { cmd(`${this.userPublic.broom ? "dejannify" : "jannify"} ${this.id}`); },
-                                        visible: () => pope,
-                                    },
-                                }
+                        });
+                    }
+                    if (admin) {
+                        Object.assign(extra, {
+                            "ban": {
+                                name: "Ban",
+                                callback: () => socket.emit("command", { list: ["ban", this.id] }),
                             },
-                            ...(admin ? {
-                                "ban": {
-                                    name: "Ban",
-                                    callback: () => {
-                                        socket.emit("command", {
-                                            list: ["ban", this.id],
-                                        });
-                                    },
-                                },
-                                "info": {
-                                    name: "Info",
-                                    callback: () => {
-                                        socket.emit("command", {
-                                            list: ["info", this.id],
-                                        });
-                                    },
-                                }
-                            } : {})
-                        } : {})
-                    };
-                };
+                            "info": {
+                                name: "Info",
+                                callback: () => socket.emit("command", { list: ["info", this.id] }),
+                            },
+                        });
+                    }
+                }
                 return {
                     items: {
                         "cancel": {
@@ -443,6 +462,7 @@ class Bonzi {
                     }
                 };
             },
+            
             animation: {
                 duration: 175,
                 show: 'fadeIn',
@@ -497,6 +517,10 @@ class Bonzi {
     }
 
     stopSpeaking() {
+        if (this.browserSpeech && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            this.browserSpeech = false;
+        }
         if (this.voiceSource) {
             this.voiceSource.stop();
             // This is most fragile part of the code and all bugs will happen here
@@ -515,10 +539,45 @@ class Bonzi {
         }
     }
 
+    speakText(text, displayText) {
+        const onEnded = () => {
+            if (!displayText.includes("||")) this.clearDialog();
+        };
+        try {
+            if (typeof speak !== "undefined" && speak.play) {
+                speak.play(text, {
+                    pitch: this.userPublic.pitch,
+                    speed: this.userPublic.speed
+                }, onEnded, (source) => {
+                    this.voiceSource = source;
+                });
+                return;
+            }
+        } catch (error) {
+            console.warn("Bundled TTS unavailable; using browser speech.", error);
+        }
+        if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.pitch = clamp(0.1, Number(this.userPublic.pitch || 50) / 50, 2);
+        utterance.rate = clamp(0.5, Number(this.userPublic.speed || 175) / 175, 2);
+        utterance.onend = onEnded;
+        this.browserSpeech = true;
+        utterance.addEventListener("end", () => {
+            this.browserSpeech = false;
+        }, { once: true });
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+    }
+
     setSprite(sprite) {
         this.sprite = sprite;
-        this.element.style.backgroundPositionX = `-${sprite % 12 * 200}px`;
-        this.element.style.backgroundPositionY = `-${floor(sprite / 12) * 160}px`;
+        const frameWidth = this.data.sprite.frames.width;
+        const frameHeight = this.data.sprite.frames.height;
+        const columns = Math.floor(this.data.sprite.w / frameWidth);
+        const scaleX = 200 / frameWidth;
+        const scaleY = 160 / frameHeight;
+        this.element.style.backgroundPositionX = `-${sprite % columns * frameWidth * scaleX}px`;
+        this.element.style.backgroundPositionY = `-${floor(sprite / columns) * frameHeight * scaleY}px`;
     }
 
     setAnim(anim) {
@@ -527,14 +586,37 @@ class Bonzi {
     }
 
     update() {
-        let anim = this.data.sprite.animations[this.currentAnim];
-        // Single-frame animations are plain numbers (e.g. idle: 0), arrays are [start, end, next, speed]
-        let frame = typeof anim === "number" ? anim : anim[this.animFrame];
-        while (typeof frame === "string") {
-            this.setAnim(frame);
-            anim = this.data.sprite.animations[this.currentAnim];
-            frame = typeof anim === "number" ? anim : anim[this.animFrame];
+        let animation = this.data.sprite.animations[this.currentAnim];
+        let frame = null;
+        let nextAnimation = null;
+        let speed = 1;
+
+        if (typeof animation === "number") {
+            frame = animation;
+        } else if (Array.isArray(animation)) {
+            const [start, end, next, animationSpeed = 1] = animation;
+            speed = animationSpeed;
+            nextAnimation = next;
+            const step = Math.floor(this.animFrame / speed);
+            frame = start <= end ? start + step : start - step;
+            if ((start <= end && frame > end) || (start > end && frame < end)) {
+                this.setAnim(nextAnimation || "idle");
+                animation = this.data.sprite.animations[this.currentAnim];
+                frame = typeof animation === "number" ? animation : null;
+            }
+        } else if (animation && typeof animation === "object") {
+            const frames = animation.frames || [];
+            speed = animation.speed || 1;
+            nextAnimation = animation.next;
+            const frameIndex = Math.floor(this.animFrame / speed);
+            frame = frames[frameIndex];
+            if (frame == null) {
+                this.setAnim(nextAnimation || "idle");
+                animation = this.data.sprite.animations[this.currentAnim];
+                frame = typeof animation === "number" ? animation : null;
+            }
         }
+
         if (frame != null) this.setSprite(frame);
         this.animFrame++;
         if (this.eventList.length === 0) {
@@ -640,65 +722,24 @@ class Bonzi {
         bonzilog(this.id, this.userPublic.name, html, this.color, text, quoteHTML !== "");
 
         if (!say.startsWith("-")) {
-            if (this.userPublic.voice == "sam") {
-
-                this.userPublic.a = new Audio("https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(say) + "&voice=Sam&pitch=" + Math.max(Math.min(parseInt(this.userPublic.pitch), 200), 60) + "&speed=" + Math.max(Math.min(parseInt(this.userPublic.speed), 250), 50) + "");
-                this.userPublic.a.play();
-                this.userPublic.a.onended = function() {
-                    self.clearDialog()
-                }
-
-            } else if (this.userPublic.voice == "mike") {
-
-                this.userPublic.a = new Audio("https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(say) + "&voice=Mike&pitch=" + Math.max(Math.min(parseInt(this.userPublic.pitch), 226), 60) + "&speed=" + Math.max(Math.min(parseInt(this.userPublic.speed), 250), 50) + "");
-                this.userPublic.a.play();
-                this.userPublic.a.onended = function() {
-                    self.clearDialog()
-                }
-
-            } else if (this.userPublic.voice == "mary") {
-
-                this.userPublic.a = new Audio("https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(say) + "&voice=Mary&pitch=" + Math.max(Math.min(parseInt(this.userPublic.pitch), 336), 60) + "&speed=" + Math.max(Math.min(parseInt(this.userPublic.speed), 250), 50) + "");
-                this.userPublic.a.play();
-                this.userPublic.a.onended = function() {
-                    self.clearDialog()
-                }
-
-            } else if (this.userPublic.voice !== "default" && this.userPublic.voice !== "en-us") {
-                // fish.audio voice via the TTS worker
+            if (this.userPublic.voice === "sam" || this.userPublic.voice === "mike" || this.userPublic.voice === "mary") {
+                const voice = this.userPublic.voice[0].toUpperCase() + this.userPublic.voice.slice(1);
+                this.userPublic.a = new Audio("https://www.tetyys.com/SAPI4/SAPI4?text=" + encodeURIComponent(say) + "&voice=" + voice + "&pitch=" + Math.max(Math.min(parseInt(this.userPublic.pitch), 336), 60) + "&speed=" + Math.max(Math.min(parseInt(this.userPublic.speed), 250), 50));
+                this.userPublic.a.play().catch(() => self.speakText(say, text));
+                this.userPublic.a.onended = () => self.clearDialog();
+            } else {
                 fetch("/api/tts", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: say, voice_id: this.userPublic.voice }),
+                    body: JSON.stringify({ text: say, voice_id: this.userPublic.voice || "default" }),
                 }).then(res => {
                     if (!res.ok) throw Error(`TTS ${res.status}`);
                     return res.blob();
                 }).then(blob => {
                     self.userPublic.a = new Audio(URL.createObjectURL(blob));
-                    self.userPublic.a.play();
-                    self.userPublic.a.onended = function() {
-                        self.clearDialog()
-                    };
-                }).catch(() => {
-                    // Fallback to default voice on error
-                    speak.play(say, {
-                        "pitch": self.userPublic.pitch,
-                        "speed": self.userPublic.speed
-                    }, function() {
-                        if (!text.includes("||")) self.clearDialog();
-                    }, function(source) {
-                        self.voiceSource = source;
-                    });
-                });
-            } else {
-                speak.play(say, {
-                    "pitch": self.userPublic.pitch,
-                    "speed": self.userPublic.speed
-                }, function() {
-                    if (!text.includes("||")) self.clearDialog();
-                }, function(source) {
-                    self.voiceSource = source;
-                });
+                    self.userPublic.a.play().catch(() => self.speakText(say, text));
+                    self.userPublic.a.onended = () => self.clearDialog();
+                }).catch(() => self.speakText(say, text));
             }
         }
     }
@@ -796,11 +837,11 @@ class Bonzi {
         } else if (this.userPublic.typing) {
             typing = ` (${this.userPublic.typing})`;
         };
-        this.nametag.innerHTML = nmarkup(this.userPublic.name) + "" + typing;
+        this.nametag.innerHTML = `${this.userPublic.broom ? JANITOR_BROOM : ""}${nmarkup(this.userPublic.name)}${typing}`;
     }
 
     updateTag() {
-        this.tag.innerHTML = nmarkup(this.userPublic.tag);
+        this.tag.innerHTML = nmarkup(this.userPublic.tag || "");
     }
 
     youtube(vid) {
@@ -918,7 +959,9 @@ class Bonzi {
 
     updateSprite() {
         this.cancel();
+        this.data = characterData(this.color.split(" ")[0]);
         this.element.style.backgroundImage = this.toBgImg();
+        this.element.style.backgroundSize = `${this.data.sprite.w * (200 / this.data.sprite.frames.width)}px ${this.data.sprite.h * (160 / this.data.sprite.frames.height)}px`;
         this.move();
     }
 
@@ -1073,12 +1116,13 @@ function bonzisCheck() {
             let bonzi = bonzis.get(key);
             let oldName = bonzi.userPublic.name;
             let oldTyping = bonzi.userPublic.typing;
+            let oldBroom = bonzi.userPublic.broom;
             bonzi.userPublic = public;
             if (oldName !== public.name) {
                 let msg = `${nisolate(oldName)} is now known as ${nisolate(public.name)}.`;
                 bonzilog("server", "", markup(msg), null, msg, true)
             }   
-            if (oldTyping !== public.typing || oldName !== public.name) {
+            if (oldTyping !== public.typing || oldName !== public.name || oldBroom !== public.broom) {
                 bonzi.updateName();
             }
             bonzi.updateTag();
@@ -1112,6 +1156,7 @@ setInterval(() => {
 }, 66.67);
 
 let socket = io("//");
+let hasConnected = false;
 
 let usersPublic = new Map;
 let bonzis = new Map;
@@ -1119,6 +1164,12 @@ let bonzis = new Map;
 login_name.value = localStorage.name || "";
 
 function login() {
+    if (!socket.connected) {
+        login_error.textContent = "Chat server unavailable. Start the BonziWORLD server and try again.";
+        login_error.hidden = false;
+        return;
+    }
+
     socket.emit("login", {
         name: login_name.value,
         room: login_room.value,
@@ -1127,7 +1178,13 @@ function login() {
     setup();
 }
 
-login_go.onclick = login;
+login_go.addEventListener("click", login);
+login_go.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        login();
+    }
+});
 
 login_room.value = window.location.hash.slice(1);
 
@@ -1177,6 +1234,7 @@ socket.on("loginFail", (data) => {
 });
 
 socket.on("disconnect", () => {
+    if (!hasConnected) return;
     errorFatal();
     logJoins = false;
     socket.connect();
@@ -1186,7 +1244,7 @@ let typingTimeout = 0;
 
 function errorFatal() {
     if (blockerror) return;
-    if (!page_ban.hidden || page_kick.hidden) {
+    if (!page_ban.hidden || !page_kick.hidden) {
         page_error.hidden = false;
     }
 }
@@ -1408,7 +1466,7 @@ function sendInput() {
             if (list[0] === "clear") {
                 lastUser = "";
                 chat_log_content.innerText = "";
-            } else if (list[0] === "statlock" && (trusted || king || admin)) {
+            } else if (list[0] === "statlock" && hasModeratorAccess()) {
                 let tolock = find(list[1]);
                 if (tolock == null) {
                     new Dialog({ title: "Error", class: "flex_window", html: `<div class="fill center"><span>User not found</span></div>`, width: 400, height: 200, x: 100, y: 100 });
@@ -1416,7 +1474,7 @@ function sendInput() {
                 }
                 tolock.userPublic.locked = !tolock.userPublic.locked;
                 socket.emit("command", { list: ["statlock", list[1]] });
-            } else if (list[0] === "jewify" && (trusted || king || admin)) {
+            } else if (list[0] === "jewify" && hasModeratorAccess()) {
                 let tojew = find(list[1]);
                 if (tojew == null) {
                     new Dialog({ title: "Error", class: "flex_window", html: `<div class="fill center"><span>User not found</span></div>`, width: 400, height: 200, x: 100, y: 100 });
@@ -1897,6 +1955,9 @@ function janitorPopup() {
                     <div class="card glow" onclick="cmd('glow')"></div>
                     <div class="card noob" onclick="cmd('noob')"></div>
                     <div class="card gold" onclick="cmd('gold')"></div>
+                    <div class="card lavenderribbon" onclick="cmd('color lavenderribbon')"></div>
+                    <div class="card spongebob" onclick="cmd('color spongebob')"></div>
+                    <div class="card facty" onclick="cmd('color facty')"></div>
                 </div>
                 <h3>Hats</h3>
                 <div class="roulette">
@@ -1989,9 +2050,18 @@ socket.on("janitorRemove", (data) => {
     }
 });
 
-start_button.onclick = () => {
-    start_menu.hidden = !start_menu.hidden;
-};
+const startButton = document.getElementById("start_button");
+if (startButton) {
+    startButton.onclick = () => {
+        start_menu.hidden = !start_menu.hidden;
+    };
+    startButton.onkeydown = (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            startButton.click();
+        }
+    };
+}
 
 
 function bonziEditorPopup() {
@@ -2334,3 +2404,4 @@ const observer = new MutationObserver(mutations => {
 });
 
 observer.observe(document.body, { childList: true, subtree: true });
+
