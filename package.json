@@ -2,7 +2,10 @@
 	"name": "bonziworld_server",
 	"version": "1.6.2",
 	"description": "Server for the BonziWORLD chat client.",
-	"main": "index.ts",
+	"main": "server.js",
+	"scripts": {
+		"start": "node --env-file-if-exists=.env server.js"
+	},
 	"author": "Joseph Judge",
 	"private": true,
 	"type": "module",
