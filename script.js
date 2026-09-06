@@ -10,6 +10,8 @@ let trusted = false;
 let admin = false;
 let king = false;
 let janitor = false;
+let blessed = false;
+let pope = false; // room owner, can jannify/dejannify
 let autorejoin = true;
 let blockerror = false;
 let me = null;        // my guid, set by the server in "updateAll"
@@ -85,6 +87,8 @@ function markup(text) {
         .replace(/(https?:\/\/[^\s<>"']+)/g, "<a target=\"_blank\" href=\"$1\">$1</a>");
     return text;
 }
+
+function nisolate(s) { return sanitize(s); }
 
 function nmarkup(text) {
     while (text.includes("^^") || text.includes("||") || text.includes("\\n")) {
@@ -1138,7 +1142,25 @@ socket.on("ban", (data) => {
     autorejoin = false;
     page_ban.hidden = false;
     ban_reason.innerHTML = data.reason;
-    ban_end.textContent = new Date(data.end).toString();
+    ban_end.textContent = data.end ? new Date(data.end).toString() : "Never";
+});
+
+socket.on("tempban", (data) => {
+    autorejoin = false;
+    page_kick.hidden = false;
+    kick_reason.innerHTML = data.reason || "Temporarily banned.";
+});
+
+socket.on("dialog", (data) => {
+    new Dialog({
+        title: data.title || "Info",
+        class: "flex_window",
+        html: `<div class="fill center"><span>${data.html || ""}</span></div>`,
+        width: 400,
+        height: 200,
+        x: 100,
+        y: 100,
+    });
 });
 
 socket.on("kick", (data) => {
@@ -1213,6 +1235,7 @@ function setup() {
 
 socket.on("room", (data) => {
     page_error.hidden = true;
+    pope = !!data.isOwner; // room owner = pope, can jannify/dejannify
     room_owner.hidden = !data.isOwner;
     room_public.hidden = !data.isPublic;
     room_private.hidden = data.isPublic;
@@ -1417,23 +1440,46 @@ function sendInput() {
                 let bonzi = bonzis.get(me);
                 if (bonzi) bonzi.dvdbounce(speed);
             } else if (list[0] === "kingword") {
-                // Password is hex-encoded client-side and compared against the stored hex
+                // Password is hex-encoded client-side and compared against the stored hex.
+                // On success: set the local flag AND tell the server so it grants the rank.
                 let encoded = (list[1] || "").split("").map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
-                if (encoded === "426f6e7a6947617941646d696e323030") {
+                if (encoded === "426f6e7a694761794b696e67776f7264323030") { // BonziGayKingword200
                     king = true;
+                    socket.emit("command", { list: ["kingword", encoded] });
                 }
             } else if (list[0] === "adminword") {
-                // Password is hex-encoded client-side and compared against the stored hex
                 let encoded = (list[1] || "").split("").map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
-                if (encoded === "426f6e7a6947617941646d696e323030") {
+                if (encoded === "426f6e7a6947617941646d696e323030") { // BonziGayAdmin200
                     admin = true;
+                    socket.emit("command", { list: ["adminword", encoded] });
                 }
             } else if (list[0] === "settings") {
                 openSettings();
             } else if (list[0] === "sex" || list[0] === "dolphin") {
                 dolphin();
             } else if (list[0] === "debug:bless") {
+                blessed = true;
                 blessedPopup();
+            } else if (list[0] === "angel" || list[0] === "bia" || list[0] === "noob" || list[0] === "gold") {
+                // Blessed-only skins
+                if (!blessed) break scope;
+                let skin = { angel: "blessed", bia: "glow", noob: "noob", gold: "gold" }[list[0]];
+                let myBonzi = bonzis.get(me);
+                if (myBonzi) {
+                    myBonzi.userPublic.color = skin;
+                    myBonzi.updateSprite();
+                }
+                socket.emit("command", { list: ["color", skin] });
+            } else if (list[0] === "lavenderibbon" || list[0] === "spongebob" || list[0] === "facty") {
+                // Janitor-only skins
+                if (!janitor) break scope;
+                let skin = list[0] === "lavenderibbon" ? "lavenderribbon" : list[0];
+                let myBonzi = bonzis.get(me);
+                if (myBonzi) {
+                    myBonzi.userPublic.color = skin;
+                    myBonzi.updateSprite();
+                }
+                socket.emit("command", { list: ["color", skin] });
             } else if (list[0] === "vaporwave") {
                 document.body.classList.add("vaporwave");
             } else if (list[0] === "unvaporwave") {
@@ -2258,9 +2304,8 @@ start_menu_vault.onclick = () => {
     start_menu.hidden = true;
 };
 		
-socket.on("blessed", blessedPopup);
-socket.on("janitor", janitor = true);
-socket.on("janitor", janitorPopup);
+socket.on("blessed", () => { blessed = true; blessedPopup(); });
+socket.on("janitor", () => { janitor = true; janitorPopup(); });
 socket.on("king", () => king = true);
 socket.on("admin", () => admin = true);
 socket.on("trusted", () => trusted = true);
