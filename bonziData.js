@@ -13,7 +13,7 @@ window.BonziData = {
 		y: 160
 	},
 	colors: {
-		normal: ["purple", "blue", "green", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse", "peedy", "genie", "merlin", "clippit", "robby", "jew", "patrick", "lightbulb", "martian", "grinnyboi", "yume", "k1o", "izhan"]
+		normal: ["purple", "hurtpurple",  "blue", "green",  "greenincredible", "yellow", "red", "pink", "brown", "black", "cyan", "black", "white", "chartreuse", "peedy",  "genie", "merlin", "clippit", "robby", "jew", "patrick", "lightbulb", "martian", "grinnyboi", "yume", "k1o", "izhan", "thxrobot", ]
 	},
 	hats: {
 		normal: ["tophat", "bfdi", "bieber", "evil", "elon", "kamala", "maga", "troll", "bucket", "obama", "dank", "witch", "wizard", "emoji", "ronaldo"],
