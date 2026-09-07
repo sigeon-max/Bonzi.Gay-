@@ -151,7 +151,7 @@ let dragX = 0;
 let dragY = 0;
 let chatLogDragged = false;
 
-let colors = ["purple", "blue", "green", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse", "peedy", "genie","merlin", "clippit", "robby", "jew",  "patrick",  "lightbulb",  "martian",  "grinnyboi",  "yume",  "k1o", "izhan"];
+let colors = ["purple", "hurtpurple", "blue", "green", "greenincredible", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse", "peedy", "genie","merlin", "clippit", "robby", "jew",  "patrick",  "lightbulb",  "martian",  "grinnyboi",  "yume",  "k1o", "izhan",  "thxrobot",];
 let hats = ["tophat", "bfdi", "bieber", "evil", "elon", "kamala", "maga", "troll", "bucket", "obama", "witch", "wizard", "emoji", "ronaldo"]
 
 function animationRange(begin, end) {
