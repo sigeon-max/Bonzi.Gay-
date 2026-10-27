@@ -151,7 +151,7 @@ let dragX = 0;
 let dragY = 0;
 let chatLogDragged = false;
 
-let colors = ["purple", "hurtpurple", "blue", "green", "greenincredible", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse", "peedy", "genie","merlin", "clippit", "robby", "jew",  "patrick",  "lightbulb",  "martian",  "grinnyboi",  "yume",  "k1o", "izhan",  "thxrobot",];
+let colors = ["purple", "blue", "green", "yellow", "red", "pink", "brown", "black", "cyan", "black", "pope", "blessed", "white", "chartreuse", "peedy", "genie","merlin", "clippit", "robby", "jew",  "patrick",  "lightbulb",  "martian",  "grinnyboi",  "yume",  "k1o", "izhan"];
 let hats = ["tophat", "bfdi", "bieber", "evil", "elon", "kamala", "maga", "troll", "bucket", "obama", "witch", "wizard", "emoji", "ronaldo"]
 
 function animationRange(begin, end) {
@@ -571,6 +571,27 @@ function characterData(color) {
     return { ...window.BonziData, sprite: { ...window.BonziData.sprite, w: profile.sheetWidth, h: profile.sheetHeight, frames: { width: profile.width, height: profile.height }, animations } };
 }
 
+// Some color sheets are single 200x160 frames (greenincredible, k1o, lightbulb,
+// martian, facty, ...) while the base sprite data declares a 3400x3360 grid.
+// Rendering them with the declared size stretches the frame into invisibility,
+// so probe each image once and use its natural size when it is smaller.
+const spriteNaturalSizes = new Map();
+function probeSpriteSize(color) {
+    const key = color.split(" ")[0];
+    if (spriteNaturalSizes.has(key)) return;
+    spriteNaturalSizes.set(key, null);
+    const img = new Image();
+    img.onload = () => {
+        spriteNaturalSizes.set(key, { w: img.naturalWidth, h: img.naturalHeight });
+        for (const b of bonzis.values()) {
+            if (b.color.split(" ")[0] !== key) continue;
+            b.applyBackgroundSize();
+            b.setSprite(b.sprite);
+        }
+    };
+    img.src = `img/bonzi/${key}.webp`;
+}
+
 let quote = null;
 let lastUser = "";
 
@@ -667,7 +688,8 @@ class Bonzi {
         this.element = document.createElement("div");
         this.element.classList.add("bonzi");
         this.element.style.backgroundImage = this.toBgImg();
-        this.element.style.backgroundSize = `${this.data.sprite.w * (200 / this.data.sprite.frames.width)}px ${this.data.sprite.h * (160 / this.data.sprite.frames.height)}px`;
+        probeSpriteSize(this.color);
+        this.applyBackgroundSize();
         this.element.style.zIndex = lastZ++;
         this.nametag = document.createElement("div");
         this.nametag.classList.add("bonzi_name");
@@ -756,7 +778,7 @@ class Bonzi {
                                 "jannify": {
                                     name: () => this.userPublic.broom ? "Dejannify" : "Jannify",
                                     callback: () => socket.emit("command", { list: ["jannify", this.id] }),
-                                    visible: () => pope,
+                                    visible: () => pope || king || admin,
                                 },
                             },
                         },
@@ -913,19 +935,24 @@ class Bonzi {
         const onEnded = () => {
             if (!displayText.includes("||")) this.clearDialog();
         };
-        try {
-            if (typeof speak !== "undefined" && speak.play) {
-                speak.play(text, {
-                    pitch: this.userPublic.pitch,
-                    speed: this.userPublic.speed
-                }, onEnded, (source) => {
-                    this.voiceSource = source;
-                });
-                return;
-            }
-        } catch (error) {
-            console.warn("Bundled TTS unavailable; using browser speech.", error);
+        this.playServerTTS(text, onEnded);
+    }
+
+    playServerTTS(text, onEnded) {
+        if (!window.Audio) {
+            this.browserSpeechFallback(text, onEnded);
+            return;
         }
+        const audio = new Audio(`/api/tts?text=${encodeURIComponent(text)}&voice_id=${encodeURIComponent(this.userPublic.voice || "default")}`);
+        this.userPublic.a = audio;
+        if (onEnded) audio.onended = onEnded;
+        audio.play().catch(() => {
+            // Autoplay blocked or stream failed — fall back to browser speech.
+            this.browserSpeechFallback(text, onEnded);
+        });
+    }
+
+    browserSpeechFallback(text, onEnded) {
         if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.pitch = clamp(0.1, Number(this.userPublic.pitch || 50) / 50, 2);
@@ -940,14 +967,33 @@ class Bonzi {
     }
 
     setSprite(sprite) {
+        if (this.isSingleFrame()) sprite = 0; // other frames don't exist on single-frame sheets
         this.sprite = sprite;
         const frameWidth = this.data.sprite.frames.width;
         const frameHeight = this.data.sprite.frames.height;
-        const columns = Math.floor(this.data.sprite.w / frameWidth);
+        const size = this.sheetSize();
+        const columns = Math.max(1, Math.floor(size.w / frameWidth));
         const scaleX = 200 / frameWidth;
         const scaleY = 160 / frameHeight;
         this.element.style.backgroundPositionX = `-${sprite % columns * frameWidth * scaleX}px`;
         this.element.style.backgroundPositionY = `-${floor(sprite / columns) * frameHeight * scaleY}px`;
+    }
+
+    sheetSize() {
+        const declared = { w: this.data.sprite.w, h: this.data.sprite.h };
+        const natural = spriteNaturalSizes.get(this.color.split(" ")[0]);
+        if (natural && natural.w < declared.w && natural.h <= declared.h) return natural;
+        return declared;
+    }
+
+    isSingleFrame() {
+        const size = this.sheetSize();
+        return size.w <= this.data.sprite.frames.width && size.h <= this.data.sprite.frames.height;
+    }
+
+    applyBackgroundSize() {
+        const size = this.sheetSize();
+        this.element.style.backgroundSize = `${size.w * (200 / this.data.sprite.frames.width)}px ${size.h * (160 / this.data.sprite.frames.height)}px`;
     }
 
     setAnim(anim) {
@@ -1137,12 +1183,7 @@ class Bonzi {
             if (scrolled) {
                 chat_log_content.scrollTop = chat_log_content.scrollHeight;
             }
-            speak.play(text.replaceAll("[[", ""), {
-                "pitch": this.userPublic.pitch,
-                "speed": this.userPublic.speed
-            }, () => { }, (source) => {
-                this.voiceSource = source;
-            });
+            this.playServerTTS(text.replaceAll("[[", ""), () => { });
         }
     }
 
@@ -1331,7 +1372,8 @@ class Bonzi {
         this.cancel();
         this.data = characterData(this.color.split(" ")[0]);
         this.element.style.backgroundImage = this.toBgImg();
-        this.element.style.backgroundSize = `${this.data.sprite.w * (200 / this.data.sprite.frames.width)}px ${this.data.sprite.h * (160 / this.data.sprite.frames.height)}px`;
+        probeSpriteSize(this.color);
+        this.applyBackgroundSize();
         this.move();
     }
 
@@ -1543,6 +1585,7 @@ function login() {
     socket.emit("login", {
         name: login_name.value,
         room: login_room.value,
+        voice: localStorage.voice || "default",
     });
     localStorage.name = login_name.value;
     setup();
@@ -2092,15 +2135,68 @@ const VOICES = [
     { id: "53bd5738d58841d1b9a644da306c45a2", name: "Wata" },
     { id: "0bfd5ff13ebc4a548c7f9b902965dd2b", name: "Mattthew Littlemore" },
     { id: "0852d11c7a644b5fb94d7e0e36aaa54a", name: "Nyanwolf Kevin" },
+    { id: "c21c125b6955478287b73632ea708d8f", name: "Cookie Monster" },
+    { id: "73a1ed580bd4488086c92aa314c9b5d8", name: "Pixiu (Chinese)" },
     { id: "sam", name: "SAPI4 Sam" },
     { id: "mike", name: "SAPI4 Mike" },
     { id: "mary", name: "SAPI4 Mary" },
     { id: "default", name: "Default" },
 ];
 
+// Voice Packs — each pack lists voices fetched live from speech.seedy.cc.
+// A seedy voice's id is "seedy:<name>" so the server routes it to speech.seedy.cc/synthesize.
+const VOICE_PACKS = [
+    { name: "Classic SAPI4", voices: ["Sam", "Mike", "Mary", "Mary in Space", "Mike in Hall", "RoboSoft One", "RoboSoft Three", "RoboSoft Five", "Adult Male #1, American English TruVoice", "Adult Female #1, American English TruVoice"] },
+    { name: "Novelty", voices: ["Biff", "Bells", "Big Bob", "Boing", "Bubbles", "Cellos", "Fred", "Junior", "Kathy", "Perfect Paul", "Precise Pete", "Ralph", "Ricochet", "Robo Robert", "Skip", "Trinoids", "Vader", "Whisper", "Zarvox", "Freddy"] },
+    { name: "Microsoft SAPI5", voices: ["Microsoft Sam", "Microsoft Mike", "Microsoft Mary", "Microsoft David Desktop", "Microsoft Zira Desktop", "Microsoft Anna", "Microsoft Lili"] },
+    { name: "Google TTS", voices: null }, // null = every fetched voice ending in " Google"
+    { name: "All", voices: null, all: true },
+];
+
+let seedyVoices = [];
+try {
+    seedyVoices = JSON.parse(localStorage.seedyVoices || "[]");
+} catch (e) {
+    seedyVoices = [];
+}
+
+function seedyVoicesForPack(pack) {
+    if (!pack) return [];
+    if (pack.all) return seedyVoices;
+    if (pack.voices) return pack.voices.filter(v => seedyVoices.includes(v));
+    return seedyVoices.filter(v => v.endsWith(" Google"));
+}
+
+async function refreshSeedyVoices() {
+    try {
+        const res = await fetch("/api/seedy/voices");
+        if (!res.ok) throw Error(`${res.status}`);
+        const data = await res.json();
+        if (Array.isArray(data.voices) && data.voices.length) {
+            seedyVoices = data.voices.map(String);
+            localStorage.seedyVoices = JSON.stringify(seedyVoices);
+        }
+    } catch (e) {
+        // keep cached list on failure
+    }
+    return seedyVoices;
+}
+
 function voiceSelectorHTML(selected) {
-    return `<select class="voice_select">` +
-        VOICES.map(v => `<option value="${v.id}" ${v.id === selected ? "selected" : ""}>${sanitize(v.name)}</option>`).join("") +
+    let options = VOICES.map(v => `<option value="${v.id}" ${v.id === selected ? "selected" : ""}>${sanitize(v.name)}</option>`).join("");
+    const seedy = seedyVoices.map(name => ({ id: "seedy:" + name, name }));
+    if (seedy.length) {
+        options += seedy.map(v => `<option value="${v.id}" ${v.id === selected ? "selected" : ""}>${sanitize(v.name)}</option>`).join("");
+    }
+    return `<select class="voice_select">` + options + `</select>`;
+}
+
+function voicePackSelectorHTML() {
+    const current = localStorage.voicePack || "";
+    return `<select class="voice_pack_select">` +
+        [`<option value="" ${current === "" ? "selected" : ""}>Classic list</option>`]
+            .concat(VOICE_PACKS.map(p => `<option value="${sanitize(p.name)}" ${current === p.name ? "selected" : ""}>${sanitize(p.name)}</option>`))
+            .join("") +
         `</select>`;
 }
 
@@ -2115,6 +2211,7 @@ function openSettings() {
             <div>
                 <label><input type="checkbox" class="hide"> Hide Images</label><br>
                 <label><input type="checkbox" class="classic"> Classic Background Color</label><br>
+                <label>Voice Pack: ${voicePackSelectorHTML()}</label><br>
                 <label>Voice: ${voiceSelectorHTML(localStorage.voice || "default")}</label>
             </div>  
             <div class="blacklist">
@@ -2136,6 +2233,7 @@ function openSettings() {
     let classicBg = element.querySelector(".classic");
     let blacklist = element.querySelector(".blacklist_words");
     let voiceSelect = element.querySelector(".voice_select");
+    let voicePackSelect = element.querySelector(".voice_pack_select");
     let add = element.querySelector(".add");
     hideImages.checked = localStorage.hideImages === "true";
     classicBg.checked = localStorage.classicBg === "true";
@@ -2153,10 +2251,30 @@ function openSettings() {
         if (meBonzi) {
             meBonzi.userPublic.voice = voiceSelect.value;
             if (voiceSelect.value !== "default") {
-                cmd(`voice ${voiceSelect.value}`);
+                socket.emit("command", { list: ["voice", voiceSelect.value] });
             }
         }
     }
+    voicePackSelect.oninput = async () => {
+        localStorage.voicePack = voicePackSelect.value;
+        await refreshSeedyVoices();
+        // Repopulate the voice dropdown with the pack's voices
+        const pack = VOICE_PACKS.find(p => p.name === voicePackSelect.value);
+        const packVoices = seedyVoicesForPack(pack);
+        const current = localStorage.voice || "default";
+        let options = VOICES.map(v => `<option value="${v.id}" ${v.id === current ? "selected" : ""}>${sanitize(v.name)}</option>`).join("");
+        if (packVoices.length) {
+            options += packVoices.map(name => {
+                const id = "seedy:" + name;
+                return `<option value="${id}" ${id === current ? "selected" : ""}>${sanitize(name)}</option>`;
+            }).join("");
+        }
+        voiceSelect.innerHTML = options;
+    }
+    // Populate the voice dropdown as soon as the pack's voices are fetched
+    refreshSeedyVoices().then(() => {
+        voicePackSelect.oninput();
+    });
     blacklist.value = wordBlacklist.join("\n");
     blacklist.oninput = () => {
         let words = blacklist.value.split("\n");
@@ -2498,6 +2616,11 @@ function bonziEditorPopup() {
 }
 
 start_menu_pfp.onclick = () => {
+    start_menu.hidden = true;
+    bonziEditorPopup();
+};
+
+bonzi_editor_button.onclick = () => {
     start_menu.hidden = true;
     bonziEditorPopup();
 };
