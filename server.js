@@ -1,5 +1,5 @@
 import express from "express";
-import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,7 +15,7 @@ const rooms = new Map();
 const normalColors = [
 	"purple", "blue", "green", "yellow", "red", "pink", "brown", "black",
 	"cyan", "white", "chartreuse", "jew", "patrick", "lightbulb", "martian",
-	"grinnyboi", "yume", "k1o", "izhan",
+	"grinnyboi", "yume", "k1o", "izhan", "greenincredible", "hurtpurple", "thxrobot",
 ];
 const specialColors = ["blessed", "glow", "noob", "gold", "lavenderribbon", "spongebob", "facty", "peedy", "genie", "merlin", "robby", "clippit"];
 
@@ -50,34 +50,44 @@ const fishVoiceIds = new Set([
 	"53bd5738d58841d1b9a644da306c45a2",
 	"0bfd5ff13ebc4a548c7f9b902965dd2b",
 	"0852d11c7a644b5fb94d7e0e36aaa54a",
+	"c21c125b6955478287b73632ea708d8f",
+	"73a1ed580bd4488086c92aa314c9b5d8",
 ]);
 
 function espeakVoice(voiceId) {
 	if (spanishVoices.has(voiceId)) return "es";
-	if (voiceId === "teto" || voiceId === "98655a12fa944e26b274c535e5e03842") return "en-us+f3";
-	if (voiceId === "f5c358ec0728497c90fcf33b89b4f219") return "en-us+f2";
-	return "en-us";
+	return "en/en-us";
 }
 
-function speakWithEspeak(text, voiceId, res) {
-	const synthesizer = spawn("espeak-ng", [
-		"-v", espeakVoice(voiceId),
-		"-s", "175",
-		"-p", "50",
-		"--stdout",
-		text,
-	]);
-	res.type("wav");
-	synthesizer.stdout.pipe(res);
-	synthesizer.stderr.on("data", (error) => console.error(`espeak-ng: ${error}`));
-	synthesizer.on("error", () => {
-		if (!res.headersSent) res.status(503).json({ error: "espeak-ng is unavailable" });
-	});
+// Pure-JS espeak (meSpeak) — no external binary or native build needed.
+const require = createRequire(import.meta.url);
+const mespeak = require("mespeak");
+mespeak.loadConfig(require("mespeak/src/mespeak_config.json"));
+mespeak.loadVoice(require("mespeak/voices/en/en-us.json"));
+mespeak.loadVoice(require("mespeak/voices/es.json"));
+
+function speakWithMespeak(text, voiceId, res) {
+	try {
+		const options = {
+			rawdata: "buffer",
+			voice: espeakVoice(voiceId),
+			speed: 175,
+			pitch: 50,
+		};
+		if (voiceId === "teto" || voiceId === "98655a12fa944e26b274c535e5e03842") options.variant = "f3";
+		else if (voiceId === "f5c358ec0728497c90fcf33b89b4f219") options.variant = "f2";
+		const wav = mespeak.speak(text, options);
+		if (!wav || !wav.length) throw new Error("synthesis produced no audio");
+		res.type("wav").send(wav);
+	} catch (error) {
+		console.error(`mespeak: ${error.message}`);
+		if (!res.headersSent) res.status(500).json({ error: "TTS synthesis failed" });
+	}
 }
 
-app.post("/api/tts", async (req, res) => {
-	const text = String(req.body?.text || "").trim().slice(0, 1000);
-	const voiceId = String(req.body?.voice_id || "default");
+async function ttsHandler(req, res) {
+	const text = String(req.body?.text || req.query.text || "").trim().slice(0, 1000);
+	const voiceId = String(req.body?.voice_id || req.query.voice_id || "default");
 	if (!text) return res.status(400).json({ error: "No text" });
 
 	if (fishVoiceIds.has(voiceId)) {
@@ -85,31 +95,69 @@ app.post("/api/tts", async (req, res) => {
 			return res.status(503).json({ error: "Fish Audio is not configured. Set FISH_KEY before starting the server." });
 		}
 		try {
-			const fishResponse = await fetch("https://api.fish.audio/v1/tts", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${fishKey}`,
-					model: "s2.1-pro-free",
-				},
-				body: JSON.stringify({
-					text,
-					reference_id: voiceId,
-					format: "mp3",
-					normalize: true,
-				}),
-			});
+			let fishResponse;
+			for (let attempt = 0; attempt < 3; attempt++) {
+				fishResponse = await fetch("https://api.fish.audio/v1/tts", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${fishKey}`,
+						model: "s2.1-pro-free",
+					},
+					body: JSON.stringify({
+						text,
+						reference_id: voiceId,
+						format: "mp3",
+						normalize: true,
+					}),
+				});
+				if (fishResponse.status !== 401 || attempt === 2) break;
+				await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+			}
 			if (fishResponse.ok) {
 				res.type("audio/mpeg").send(Buffer.from(await fishResponse.arrayBuffer()));
 				return;
 			}
-			return res.status(502).json({ error: `Fish Audio returned ${fishResponse.status}` });
+			const errText = await fishResponse.text();
+			return res.status(502).json({ error: `fish.audio ${fishResponse.status}: ${errText.slice(0, 200)}` });
 		} catch (error) {
-			return res.status(502).json({ error: `Fish Audio failed: ${error.message}` });
+			return res.status(502).json({ error: `upstream error: ${error.message}` });
 		}
 	}
 
-	speakWithEspeak(text, voiceId, res);
+	// speech.seedy.cc voices (selected via the Voice Pack dropdown) — stream the upstream WAV.
+	if (voiceId.startsWith("seedy:")) {
+		const seedyVoice = voiceId.slice("seedy:".length);
+		if (!seedyVoice) return res.status(400).json({ error: "No seedy voice" });
+		try {
+			const seedyResponse = await fetch(`https://speech.seedy.cc/synthesize?voice=${encodeURIComponent(seedyVoice)}&text=${encodeURIComponent(text)}`, { signal: AbortSignal.timeout(30000) });
+			if (seedyResponse.ok) {
+				res.type("audio/wav").send(Buffer.from(await seedyResponse.arrayBuffer()));
+				return;
+			}
+			const errText = await seedyResponse.text();
+			return res.status(502).json({ error: `speech.seedy.cc ${seedyResponse.status}: ${errText.slice(0, 200)}` });
+		} catch (error) {
+			return res.status(502).json({ error: `upstream error: ${error.message}` });
+		}
+	}
+
+	speakWithMespeak(text, voiceId, res);
+}
+
+// POST for the API contract; GET so <audio>/new Audio() can stream it directly.
+app.post("/api/tts", ttsHandler);
+app.get("/api/tts", ttsHandler);
+
+// Proxy the speech.seedy.cc voice list (no CORS on the upstream, so the browser can't fetch it directly).
+app.get("/api/seedy/voices", async (req, res) => {
+	try {
+		const r = await fetch("https://speech.seedy.cc/voices", { signal: AbortSignal.timeout(10000) });
+		if (!r.ok) return res.status(502).json({ error: `speech.seedy.cc ${r.status}` });
+		res.json(await r.json());
+	} catch (error) {
+		res.status(502).json({ error: `upstream error: ${error.message}` });
+	}
 });
 
 function roomUsers(room) {
@@ -147,7 +195,7 @@ function randomColor() {
 }
 
 io.on("connection", (socket) => {
-	socket.on("login", ({ name, room: requestedRoom, color } = {}) => {
+	socket.on("login", ({ name, room: requestedRoom, color, voice } = {}) => {
 		const roomId = String(requestedRoom || "main").trim().slice(0, 32) || "main";
 		const room = rooms.get(roomId) || new Set();
 		const isOwner = room.size === 0;
@@ -162,7 +210,7 @@ io.on("connection", (socket) => {
 			tag: "",
 			speed: 175,
 			pitch: 50,
-			voice: "en-us",
+			voice: typeof voice === "string" && voice.trim() ? voice.trim().slice(0, 100) : "en-us",
 			typing: false,
 		};
 		room.add(socket);
@@ -243,9 +291,14 @@ io.on("connection", (socket) => {
 			owo: "owo",
 		};
 		if (reactionEvents[command]) {
-			const target = findUser(room, args.join(" ")) || socket;
+			let target = findUser(room, args.join(" "));
+			if (!target) {
+				const others = [...room].filter(c => c !== socket);
+				if (others.length > 0) target = others[Math.floor(Math.random() * others.length)];
+			}
+			if (!target) return;
 			broadcastEvent(room, reactionEvents[command], {
-				guid: target.id,
+				guid: socket.id,
 				target: target.userPublic.name,
 			});
 			return;
@@ -282,10 +335,12 @@ io.on("connection", (socket) => {
 			return;
 		}
 		if (command === "kingword") {
+			socket.userPublic.level = "king";
 			socket.emit("king");
 			return;
 		}
 		if (command === "adminword") {
+			socket.userPublic.level = "admin";
 			socket.emit("admin");
 			return;
 		}
@@ -320,7 +375,7 @@ io.on("connection", (socket) => {
 			broadcastRoom(room);
 			return;
 		}
-		if (command === "jannify" && target && (socket.isOwner || socket.userPublic.level === "admin")) {
+		if (command === "jannify" && target && (socket.isOwner || ["admin", "king"].includes(socket.userPublic.level))) {
 			target.userPublic.broom = !target.userPublic.broom;
 			target.emit(target.userPublic.broom ? "janitor" : "janitorRemove", { id: target.id });
 			broadcastRoom(room);
